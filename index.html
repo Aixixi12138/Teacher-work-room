@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>中学班主任工作台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#86c8b8',
+            secondary: '#b4d8ed',
+            bgMilk: '#f8faf5',
+            cardBg: '#ffffff',
+          },
+          fontFamily: {
+            sans: ['system-ui','sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .sidebar-item-active {
+        @apply bg-primary/20 text-teal-700 border-l-4 border-primary;
+      }
+      .card-shadow {
+        @apply shadow-sm rounded-xl bg-cardBg border border-slate-100;
+      }
+      .panel-overlay {
+        @apply fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4;
+      }
+      .drawer-panel {
+        @apply bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-auto p-5;
+      }
+    }
+  </style>
+</head>
+<body class="bg-bgMilk text-slate-700 min-h-screen">
+<div id="app" class="flex min-h-screen">
+  <!-- 左侧导航栏 -->
+  <aside id="sidebar" class="bg-white border-r border-slate-200 transition-all duration-300 w-64 flex-shrink-0 flex flex-col fixed md:static h-screen z-30">
+    <div class="p-4 border-b flex items-center justify-between">
+      <h2 class="font-bold text-lg text-teal-700 sidebar-title">班主任工作台</h2>
+      <button @click="toggleSidebar" class="text-slate-500 hover:text-teal-600">
+        <i class="fa fa-bars text-xl"></i>
+      </button>
+    </div>
+    <nav class="flex-1 py-3 overflow-y-auto">
+      <div v-for="(item,idx) in menuList" :key="idx"
+           @click="changePage(item.page)"
+           class="px-4 py-3 cursor-pointer hover:bg-slate-100 flex items-center gap-3"
+           :class="[currentPage===item.page ? 'sidebar-item-active':'']">
+        <i :class="item.icon"></i>
+        <span class="sidebar-text">{{item.label}}</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- 侧边栏遮罩（移动端） -->
+  <div v-if="mobileSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black/30 z-20 md:hidden"></div>
+
+  <!-- 主内容区 -->
+  <main class="flex-1 md:ml-0 p-4 md:p-6 transition-all">
+    <!-- 工作台首页 -->
+    <div v-if="currentPage==='dashboard'">
+      <h1 class="text-[clamp(1.3rem,2vw,1.8rem)] font-semibold mb-5">工作台首页</h1>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 常规工作板块 -->
+        <div class="card-shadow p-5">
+          <h3 class="text-lg font-medium mb-4 text-teal-700 flex items-center gap-2">
+            <i class="fa fa-briefcase"></i>常规工作
+          </h3>
+          <div class="space-y-3">
+            <div @click="openModal('attendance')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
+              <div class="font-medium">早读考勤</div>
+              <div class="text-sm text-slate-500 mt-1">今日出勤、迟到、请假名单</div>
+            </div>
+            <div @click="openModal('discipline')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
+              <div class="font-medium">课堂纪律</div>
+              <div class="text-sm text-slate-500 mt-1">本周纪律、表扬、需关注学生</div>
+            </div>
+            <div @click="openModal('homework')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
+              <div class="font-medium">作业收缴</div>
+              <div class="text-sm text-slate-500 mt-1">各科收缴率、未交名单</div>
+            </div>
+            <div @click="openModal('inspect')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
+              <div class="font-medium">课间巡查</div>
+              <div class="text-sm text-slate-500 mt-1">安全巡查、异常登记</div>
+            </div>
+          </div>
+        </div>
+        <!-- 特色工作板块 -->
+        <div class="card-shadow p-5">
+          <h3 class="text-lg font-medium mb-4 text-sky-700 flex items-center gap-2">
+            <i class="fa fa-star"></i>特色工作
+          </h3>
+          <div class="space-y-3">
+            <div @click="openModal('classMeeting')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
+              <div class="font-medium">主题班会</div>
+              <div class="text-sm text-slate-500 mt-1">班会计划、开展记录</div>
+            </div>
+            <div @click="openModal('homeSchool')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
+              <div class="font-medium">家校沟通</div>
+              <div class="text-sm text-slate-500 mt-1">沟通记录、家访计划</div>
+            </div>
+            <div @click="openModal('studentGrow')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
+              <div class="font-medium">学生成长</div>
+              <div class="tex<div class="text-sm text-slate-500 mt-1">个人档案、谈心记录与评价</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷可视化图表卡片 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div class="card-shadow p-5">
+          <h3 class="font-medium text-slate-700 mb-2"><i class="fa fa-pie-chart text-teal-600 mr-2"></i>本周考勤统计</h3>
+          <div id="chart-attendance" class="w-full h-64"></div>
+        </div>
+        <div class="card-shadow p-5">
+          <h3 class="font-medium text-slate-700 mb-2"><i class="fa fa-line-chart text-sky-600 mr-2"></i>最近作业提交率</h3>
+          <div id="chart-homework" class="w-full h-64"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 其它页面占位 (例：学生档案) -->
+    <div v-else-if="currentPage==='students'" class="card-shadow p-5">
+      <h1 class="text-xl font-semibold mb-4">学生档案管理</h1>
+      <p class="text-slate-500">此处可放置学生列表、成绩录入、评价导出等表格组件。</p>
+    </div>
+  </main>
+
+  <!-- 通用弹窗 (Modal / Drawer) -->
+  <div v-if="activeModal" class="panel-overlay" @click.self="closeModal">
+    <div class="drawer-panel">
+      <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h3 class="text-lg font-bold text-slate-800">{{ modalTitle }}</h3>
+        <button @click="closeModal" class="text-slate-400 hover:text-slate-600">
+          <i class="fa fa-times text-lg"></i>
+        </button>
+      </div>
+      <div class="text-slate-600">
+        <p class="mb-3">正在录入/查看: <span class="font-bold text-teal-600">{{ modalTitle }}</span> 的详细数据</p>
+        <textarea class="w-full border rounded-lg p-3 text-sm focus:outline-none focus:border-teal-500" rows="4" placeholder="在此输入相关记录或备注..."></textarea>
+      </div>
+      <div class="mt-4 flex justify-end gap-3">
+        <button @click="closeModal" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50 text-sm">取消</button>
+        <button @click="closeModal" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-teal-600 text-sm">保存记录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 引入 Vue 3 并挂载应用 -->
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+<script>
+  const { createApp, ref, onMounted, nextTick } = Vue;
+
+  createApp({
+    setup() {
+      const currentPage = ref('dashboard');
+      const mobileSidebarOpen = ref(false);
+      const activeModal = ref(null);
+      const modalTitle = ref('');
+
+      const menuList = [
+        { label: '工作台首页', page: 'dashboard', icon: 'fa fa-home text-lg' },
+        { label: '学生档案', page: 'students', icon: 'fa fa-id-card text-lg' },
+        { label: '家校日志', page: 'homeSchoolLog', icon: 'fa fa-comments text-lg' },
+        { label: '成绩诊断', page: 'grades', icon: 'fa fa-bar-chart text-lg' }
+      ];
+
+      const toggleSidebar = () => {
+        mobileSidebarOpen.value = !mobileSidebarOpen.value;
+      };
+
+      const changePage = (page) => {
+        currentPage.value = page;
+      };
+
+      const openModal = (type) => {
+        const titleMap = {
+          attendance: '早读考勤记录',
+          discipline: '课堂纪律登记',
+          homework: '作业收缴情况',
+          inspect: '课间巡查日志',
+          classMeeting: '主题班会规划',
+          homeSchool: '家校沟通档案',
+          studentGrow: '学生成长记录'
+        };
+        modalTitle.value = titleMap[type] || '业务操作';
+        activeModal.value = type;
+      };
+
+      const closeModal = () => {
+        activeModal.value = null;
+      };
+
+      const initCharts = () => {
+        const attChartEl = document.getElementById('chart-attendance');
+        if (attChartEl) {
+          const attChart = echarts.init(attChartEl);
+          attChart.setOption({
+            tooltip: { trigger: 'item' },
+            series: [{
+              type: 'pie',
+              radius: ['40%', '70%'],
+              data: [
+                { value: 45, name: '正常出勤', itemStyle: { color: '#86c8b8' } },
+                { value: 2, name: '迟到', itemStyle: { color: '#f59e0b' } },
+                { value: 1, name: '病事假', itemStyle: { color: '#ef4444' } }
+              ]
+            }]
+          });
+        }
+
+        const hwChartEl = document.getElementById('chart-homework');
+        if (hwChartEl) {
+          const hwChart = echarts.init(hwChartEl);
+          hwChart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五'] },
+            yAxis: { type: 'value', max: 100 },
+            series: [{
+              data: [98, 95, 100, 92, 96],
+              type: 'line',
+              smooth: true,
+              itemStyle: { color: '#3b82f6' }
+            }]
+          });
+        }
+      };
+
+      onMounted(() => {
+        nextTick(() => {
+          initCharts();
+        });
+      });
+
+      return {
+        currentPage,
+        mobileSidebarOpen,
+        activeModal,
+        modalTitle,
+        menuList,
+        toggleSidebar,
+        changePage,
+        openModal,
+        closeModal
+      };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
