@@ -12,7 +12,7 @@
       theme: {
         extend: {
           colors: {
-            primary: '#0d9488', // 墨绿/青色 更加稳重
+            primary: '#0d9488',
             secondary: '#38bdf8',
             bgMilk: '#f8fafc',
             cardBg: '#ffffff',
@@ -65,8 +65,8 @@
 
     <!-- 底部数据备份与恢复 -->
     <div class="p-3 border-t bg-slate-50 text-xs flex justify-between">
-      <button @click="exportData" class="text-teal-700 hover:underline"><i class="fa fa-download mr-1"></i>备份档案</button>
-      <button @click="importData" class="text-slate-500 hover:underline"><i class="fa fa-upload mr-1"></i>导入档案</button>
+      <button @click="exportData" class="text-teal-700 hover:underline"><i class="fa fa-download mr-1"></i>备份数据</button>
+      <button @click="importData" class="text-slate-500 hover:underline"><i class="fa fa-upload mr-1"></i>导入数据</button>
     </div>
   </aside>
 
@@ -78,7 +78,7 @@
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-2xl font-bold text-slate-800">教学概览 ({{ currentClass }})</h1>
-          <p class="text-sm text-slate-500">重点关注：高二数学逻辑推导与大题得分率</p>
+          <p class="text-sm text-slate-500">点击常规工作卡片可直接录入或更新记录</p>
         </div>
         <button @click="triggerRollCall" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg shadow-sm text-sm font-medium flex items-center gap-2">
           <i class="fa fa-random"></i> 课堂板演点名
@@ -96,7 +96,7 @@
           <div class="text-2xl font-bold text-slate-800 mt-1">{{ classAverage }} 分</div>
         </div>
         <div class="card-shadow p-4 border-l-4 border-amber-500">
-          <div class="text-xs text-slate-500">待面批订正学生</div>
+          <div class="text-xs text-slate-500">待面批辅导生</div>
           <div class="text-2xl font-bold text-amber-600 mt-1">{{ pendingHelpCount }} 人</div>
         </div>
         <div class="card-shadow p-4 border-l-4 border-rose-500">
@@ -106,25 +106,26 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- 教学日常关注 -->
+        <!-- 教学日常关注（支持编辑） -->
         <div class="card-shadow p-5">
-          <h3 class="text-base font-bold mb-4 text-teal-800 flex items-center gap-2">
-            <i class="fa fa-pencil-square-o"></i>高二数学日常追踪
+          <h3 class="text-base font-bold mb-4 text-teal-800 flex items-center justify-between">
+            <span><i class="fa fa-pencil-square-o mr-2"></i>数学日常追踪记录 ({{ currentClass }})</span>
+            <span class="text-xs font-normal text-slate-400">点击卡片进行编辑</span>
           </h3>
           <div class="space-y-3">
-            <div @click="openQuickNote('作业与错题订正')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition flex justify-between items-center">
-              <div>
-                <div class="font-medium text-slate-800">大题错题订正追踪</div>
-                <div class="text-xs text-slate-500 mt-0.5">解析几何/导数大题步骤规范审查</div>
+            <div v-for="item in taskCategories" :key="item.key"
+                 @click="openTaskModal(item)" 
+                 class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition flex justify-between items-start">
+              <div class="flex-1 pr-3">
+                <div class="font-medium text-slate-800 flex items-center gap-2">
+                  <span>{{ item.title }}</span>
+                  <span v-if="getTaskRecord(item.key)" class="text-[10px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">已记录</span>
+                </div>
+                <div class="text-xs text-slate-500 mt-1 line-clamp-2">
+                  {{ getTaskRecord(item.key) || item.desc }}
+                </div>
               </div>
-              <i class="fa fa-angle-right text-slate-400"></i>
-            </div>
-            <div @click="openQuickNote('课面辅导记录')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition flex justify-between items-center">
-              <div>
-                <div class="font-medium text-slate-800">一对一面批面改日志</div>
-                <div class="text-xs text-slate-500 mt-0.5">记录后进生/临界生辅导点拨过程</div>
-              </div>
-              <i class="fa fa-angle-right text-slate-400"></i>
+              <i class="fa fa-pencil text-slate-400 mt-1"></i>
             </div>
           </div>
         </div>
@@ -137,7 +138,7 @@
       </div>
     </div>
 
-    <!-- 2. 学生档案管理（核心修改：可实时输入编辑） -->
+    <!-- 2. 学生档案管理 -->
     <div v-else-if="currentPage==='students'">
       <div class="flex justify-between items-center mb-6">
         <div>
@@ -181,6 +182,33 @@
       </div>
     </div>
   </main>
+
+  <!-- 首页日常工作编辑弹窗 -->
+  <div v-if="showTaskModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" @click.self="showTaskModal = false">
+    <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h3 class="text-lg font-bold text-slate-800">{{ activeTask.title }} ({{ currentClass }})</h3>
+        <button @click="showTaskModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa fa-times text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">说明与引导</label>
+          <p class="text-xs text-slate-400 bg-slate-50 p-2 rounded">{{ activeTask.desc }}</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">录入详细内容/记录</label>
+          <textarea v-model="editingTaskContent" rows="6" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="在此录入具体情况，例如人员名单、错题序号、谈话总结等..."></textarea>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-3">
+        <button @click="showTaskModal = false" class="px-4 py-2 border rounded-lg text-slate-600 text-sm hover:bg-slate-50">取消</button>
+        <button @click="saveTaskRecord" class="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700">保存记录</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 学生档案编辑弹窗 Modal -->
   <div v-if="showStudentModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" @click.self="showStudentModal = false">
@@ -235,14 +263,14 @@
 
   <!-- 随机点名弹窗 -->
   <div v-if="showRollCallModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl p-8 text-center max-w-sm w-full">
+    <div class="bg-white rounded-xl p-8 text-center max-w-sm w-full shadow-xl">
       <h3 class="text-sm font-bold text-slate-500 mb-4">{{ currentClass }} - 课堂提问/板演</h3>
       <div class="text-4xl font-extrabold text-teal-700 my-6 h-12 flex items-center justify-center">
         {{ selectedStudentName }}
       </div>
       <div class="flex gap-3 justify-center">
-        <button @click="startRollCall" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium">{{ isRolling ? '停止' : '重新抽签' }}</button>
-        <button @click="showRollCallModal = false" class="px-4 py-2 border rounded-lg text-slate-600 text-sm">关闭</button>
+        <button @click="startRollCall" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600">{{ isRolling ? '停止' : '重新抽签' }}</button>
+        <button @click="showRollCallModal = false" class="px-4 py-2 border rounded-lg text-slate-600 text-sm hover:bg-slate-50">关闭</button>
       </div>
     </div>
   </div>
@@ -265,7 +293,18 @@
         { label: '学生档案管理', page: 'students', icon: 'fa fa-address-book text-lg' },
       ];
 
-      // 默认示例数据
+      // 首页可编辑的任务分类配置
+      const taskCategories = [
+        { key: 'homework', title: '作业与大题错题订正', desc: '记录今日作业收缴情况、解析几何/导数大题高频错题与未订正名单。' },
+        { key: 'coaching', title: '一对一面批面改日志', desc: '记录今日对后进生/临界生的面批解答细节与疑难点点拨。' },
+        { key: 'lecture', title: '课堂板演与疑问记录', desc: '记录今日上黑板做题的学生表现，以及课堂未解决的共性疑问。' },
+        { key: 'parent', title: '家校沟通与反馈记录', desc: '记录与数学成绩波动较大的学生家长的沟通情况与协同策略。' }
+      ];
+
+      // 日常工作记录数据
+      const taskRecords = ref({});
+
+      // 默认示例学生数据
       const defaultData = {
         '高二(1)班': [
           { id: '1', no: '01', name: '张伟', score: 128, weakness: '导数切线与单调性', notes: '做题规范，大题步骤完整，可挑战压轴题。' },
@@ -278,23 +317,47 @@
         ]
       };
 
-      // 从 localStorage 加载数据或使用默认数据
       const studentsData = ref({});
+
+      // 从 localStorage 加载数据
       const loadStoredData = () => {
-        const stored = localStorage.getItem('teacher_students_data');
-        if (stored) {
-          try { studentsData.value = JSON.parse(stored); } catch (e) { studentsData.value = defaultData; }
-        } else {
-          studentsData.value = defaultData;
-        }
+        const storedStudents = localStorage.getItem('teacher_students_data');
+        studentsData.value = storedStudents ? JSON.parse(storedStudents) : defaultData;
+
+        const storedTasks = localStorage.getItem('teacher_tasks_data');
+        taskRecords.value = storedTasks ? JSON.parse(storedTasks) : {};
       };
 
-      // 保存到 localStorage
       const saveData = () => {
         localStorage.setItem('teacher_students_data', JSON.stringify(studentsData.value));
+        localStorage.setItem('teacher_tasks_data', JSON.stringify(taskRecords.value));
       };
 
       const currentStudents = computed(() => studentsData.value[currentClass.value] || []);
+
+      // 首页任务编辑 Modal
+      const showTaskModal = ref(false);
+      const activeTask = ref({});
+      const editingTaskContent = ref('');
+
+      const openTaskModal = (task) => {
+        activeTask.value = task;
+        editingTaskContent.value = getTaskRecord(task.key) || '';
+        showTaskModal.value = true;
+      };
+
+      const getTaskRecord = (key) => {
+        return (taskRecords.value[currentClass.value] && taskRecords.value[currentClass.value][key]) || '';
+      };
+
+      const saveTaskRecord = () => {
+        if (!taskRecords.value[currentClass.value]) {
+          taskRecords.value[currentClass.value] = {};
+        }
+        taskRecords.value[currentClass.value][activeTask.value.key] = editingTaskContent.value;
+        saveData();
+        showTaskModal.value = false;
+      };
 
       // 统计计算
       const classAverage = computed(() => {
@@ -332,11 +395,9 @@
         const list = studentsData.value[currentClass.value] || [];
 
         if (editingStudent.value.id) {
-          // 修改
           const idx = list.findIndex(s => s.id === editingStudent.value.id);
           if (idx !== -1) list[idx] = { ...editingStudent.value };
         } else {
-          // 新增
           editingStudent.value.id = Date.now().toString();
           list.push({ ...editingStudent.value });
         }
@@ -381,12 +442,16 @@
         }
       };
 
-      // 导出/导入数据（防丢失）
+      // 导出/导入数据
       const exportData = () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(studentsData.value));
+        const fullBackup = {
+          students: studentsData.value,
+          tasks: taskRecords.value
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullBackup));
         const dlAnchor = document.createElement('a');
         dlAnchor.setAttribute("href", dataStr);
-        dlAnchor.setAttribute("download", `高二数学学生档案_备份.json`);
+        dlAnchor.setAttribute("download", `高二数学工作台数据_备份.json`);
         dlAnchor.click();
       };
 
@@ -398,7 +463,13 @@
           const reader = new FileReader();
           reader.onload = event => {
             try {
-              studentsData.value = JSON.parse(event.target.result);
+              const res = JSON.parse(event.target.result);
+              if (res.students && res.tasks) {
+                studentsData.value = res.students;
+                taskRecords.value = res.tasks;
+              } else {
+                studentsData.value = res; // 兼容旧版本格式
+              }
               saveData();
               alert('数据恢复成功！');
               renderCharts();
@@ -450,8 +521,9 @@
       });
 
       return {
-        currentPage, classList, currentClass, menuList, currentStudents,
+        currentPage, classList, currentClass, menuList, taskCategories, currentStudents,
         classAverage, warningCount, pendingHelpCount,
+        showTaskModal, activeTask, editingTaskContent, openTaskModal, getTaskRecord, saveTaskRecord,
         showStudentModal, editingStudent, openStudentModal, saveStudent, deleteStudent,
         showRollCallModal, selectedStudentName, isRolling, triggerRollCall, startRollCall,
         exportData, importData
