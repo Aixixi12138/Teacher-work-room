@@ -59,8 +59,8 @@
           <i class="fa fa-calculator"></i>
         </div>
         <div>
-          <h2 class="font-bold text-base text-matcha-800 leading-tight">数学教学工作台</h2>
-          <p class="text-xs text-matcha-500 mt-0.5">高中数学·抹茶绿版</p>
+          <h2 class="font-bold text-base text-matcha-800 leading-tight">教学工作台</h2>
+          <p class="text-xs text-matcha-500 mt-0.5">/p>
         </div>
       </div>
 
@@ -82,7 +82,7 @@
       </div>
       <div class="overflow-hidden">
         <p class="text-sm font-bold text-matcha-800 truncate">陈老师</p>
-        <p class="text-xs text-slate-400 truncate">数学任课教师 ({{ classOptions.join('/') }})</p>
+        <p class="text-xs text-slate-400 truncate">数学 ({{ classOptions.join('/') }})</p>
       </div>
     </div>
   </aside>
@@ -246,7 +246,7 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
               <h3 class="font-bold text-lg text-slate-800">{{ currentClass }} - 学生档案管理</h3>
-              <p class="text-xs text-slate-400 mt-0.5">点击学生姓名可直接跳转查看个人历次成绩曲线；支持手动修改学号</p>
+              <p class="text-xs text-slate-400 mt-0.5"></p>
             </div>
             <div class="flex items-center gap-2">
               <button @click="addStudentPrompt" class="px-3 py-1.5 bg-matcha-100 text-matcha-800 rounded-xl text-xs font-medium hover:bg-matcha-200">
@@ -292,7 +292,7 @@
                   <td class="p-3 text-xs text-rose-500 font-medium">{{ s.weakness || '无明显短板' }}</td>
                   <td class="p-3 text-xs text-slate-500 max-w-xs truncate">{{ s.notes || '暂无面批记录' }}</td>
                   <td class="p-3 text-right space-x-2">
-                    <button @click="editStudent(s)" class="text-xs text-matcha-600 hover:underline">编辑(含学号)</button>
+                    <button @click="editStudent(s)" class="text-xs text-matcha-600 hover:underline">编辑</button>
                     <button @click="deleteStudent(s)" class="text-xs text-rose-500 hover:underline">删除</button>
                   </td>
                 </tr>
@@ -307,8 +307,8 @@
         <div class="card-style">
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
-              <h3 class="font-bold text-lg text-slate-800">高中数学每周课程表</h3>
-              <p class="text-xs text-slate-400 mt-0.5">点击单元格修改课程内容；可分别为班级设置高亮专属颜色</p>
+              <h3 class="font-bold text-lg text-slate-800">课程表</h3>
+              <p class="text-xs text-slate-400 mt-0.5"></p>
             </div>
             
             <!-- 班级颜色自定义选择器 -->
@@ -405,8 +405,8 @@
         <div class="card-style">
           <div class="flex justify-between items-center mb-4">
             <div>
-              <h3 class="font-bold text-lg text-slate-800">高中数学常用 LaTeX 公式模板库 (高一至高三)</h3>
-              <p class="text-xs text-slate-400 mt-0.5">点击卡片即可直接复制 LaTeX 代码用于备课与出题</p>
+              <h3 class="font-bold text-lg text-slate-800">高中数学常用 LaTeX 公式模板库</h3>
+              <p class="text-xs text-slate-400 mt-0.5"></p>
             </div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
