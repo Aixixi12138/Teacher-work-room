@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>数学教学工作台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>工作台 </title>
   <!-- Tailwind CSS & Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
@@ -37,10 +37,10 @@
         @apply bg-matcha-100 text-matcha-800 font-semibold border-r-4 border-matcha-600;
       }
       .card-style {
-        @apply bg-white rounded-2xl p-5 border border-matcha-100/80 shadow-sm hover:shadow-md transition-all duration-200;
+        @apply bg-white rounded-2xl p-4 md:p-5 border border-matcha-100/80 shadow-sm hover:shadow-md transition-all duration-200;
       }
       .btn-matcha {
-        @apply bg-matcha-500 hover:bg-matcha-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center gap-2;
+        @apply bg-matcha-500 hover:bg-matcha-600 text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-medium transition shadow-sm flex items-center justify-center gap-1.5;
       }
     }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -48,25 +48,40 @@
     ::-webkit-scrollbar-track { background: transparent; }
   </style>
 </head>
-<body class="bg-bgSoft text-slate-700 font-sans min-h-screen">
-<div id="app" class="flex h-screen overflow-hidden">
+<body class="bg-bgSoft text-slate-700 font-sans min-h-screen overflow-x-hidden">
+<div id="app" class="flex h-screen overflow-hidden relative">
 
-  <!-- ================= 1. 左侧固定侧边导航栏 ================= -->
-  <aside class="w-64 bg-white border-r border-matcha-100 flex flex-col justify-between flex-shrink-0 z-20 shadow-sm">
+  <!-- 移动端遮罩层 -->
+  <div v-if="isMobileMenuOpen" 
+       @click="isMobileMenuOpen = false" 
+       class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden transition-opacity">
+  </div>
+
+  <!-- ================= 1. 响应式侧边导航栏 ================= -->
+  <aside :class="[
+      'fixed md:static top-0 bottom-0 left-0 z-40 w-64 bg-white border-r border-matcha-100 flex flex-col justify-between flex-shrink-0 transition-transform duration-300 shadow-lg md:shadow-none',
+      isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    ]">
     <div>
-      <div class="p-5 border-b border-matcha-100/60 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-matcha-500 flex items-center justify-center text-white text-xl font-bold shadow-sm">
-          <i class="fa fa-calculator"></i>
+      <div class="p-4 md:p-5 border-b border-matcha-100/60 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-matcha-500 flex items-center justify-center text-white text-xl font-bold shadow-sm">
+            <i class="fa fa-calculator"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-base text-matcha-800 leading-tight">工作台</h2>
+            <p class="text-xs text-matcha-500 mt-0.5">数学</p>
+          </div>
         </div>
-        <div>
-          <h2 class="font-bold text-base text-matcha-800 leading-tight">数学教学工作台</h2>
-          <p class="text-xs text-matcha-500 mt-0.5">高中数学</p>
-        </div>
+        <!-- 移动端关闭按钮 -->
+        <button @click="isMobileMenuOpen = false" class="md:hidden text-slate-400 hover:text-slate-600 text-lg p-1">
+          <i class="fa fa-times"></i>
+        </button>
       </div>
 
       <nav class="py-3 overflow-y-auto max-h-[calc(100vh-140px)] space-y-0.5 px-2">
         <div v-for="menu in menuList" :key="menu.key"
-             @click="activeMenu = menu.key"
+             @click="switchMenu(menu.key)"
              class="flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer text-sm text-slate-600 hover:bg-matcha-50 transition"
              :class="[activeMenu === menu.key ? 'sidebar-active' : '']">
           <i :class="menu.icon" class="w-5 text-center text-matcha-600"></i>
@@ -81,25 +96,44 @@
         师
       </div>
       <div class="overflow-hidden">
-        <p class="text-sm font-bold text-matcha-800 truncate">陈Sir </p>
-        <p class="text-xs text-slate-400 truncate">数学 ({{ classOptions.join('/') }})</p>
+        <p class="text-sm font-bold text-matcha-800 truncate">陈Sir</p>
+        <p class="text-xs text-slate-400 truncate"> ({{ classOptions.join('/') }})</p>
       </div>
     </div>
   </aside>
 
   <!-- ================= 右侧主页面内容区 ================= -->
-  <div class="flex-1 flex flex-col overflow-hidden">
+  <div class="flex-1 flex flex-col overflow-hidden w-full">
 
-    <!-- 顶部全局搜索与班级切换区 -->
-    <header class="bg-white border-b border-matcha-100 px-6 py-3.5 flex justify-between items-center z-10">
-      <div class="relative w-80">
-        <i class="fa fa-search absolute left-3.5 top-3 text-matcha-500"></i>
-        <input type="text" v-model="searchQuery" 
-               placeholder="搜索学生、教案、试卷、错题..." 
-               class="w-full bg-matcha-50/50 border border-matcha-100 rounded-xl pl-10 pr-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-matcha-500/50 transition"/>
+    <!-- 顶部全局搜索与班级切换区（响应式适配） -->
+    <header class="bg-white border-b border-matcha-100 px-4 md:px-6 py-3 flex flex-col md:flex-row gap-3 md:gap-0 justify-between items-stretch md:items-center z-10">
+      
+      <!-- 移动端顶部标题栏与菜单触发按钮 -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <button @click="isMobileMenuOpen = true" class="md:hidden p-2 rounded-xl bg-matcha-50 text-matcha-800 hover:bg-matcha-100 transition">
+            <i class="fa fa-bars text-lg"></i>
+          </button>
+          <span class="md:hidden font-bold text-slate-800 text-sm">工作台</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 md:hidden">
+          <select v-model="currentClass" class="bg-matcha-50 text-matcha-800 border border-matcha-200 rounded-lg px-2 py-1 text-xs font-bold outline-none">
+            <option v-for="c in classOptions" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </div>
       </div>
 
-      <div class="flex items-center gap-3">
+      <!-- 搜索框 -->
+      <div class="relative w-full md:w-80">
+        <i class="fa fa-search absolute left-3.5 top-2.5 md:top-3 text-matcha-500 text-xs md:text-sm"></i>
+        <input type="text" v-model="searchQuery" 
+               placeholder="搜索学生、教案、试卷、错题..." 
+               class="w-full bg-matcha-50/50 border border-matcha-100 rounded-xl pl-9 pr-4 py-1.5 text-xs md:text-sm outline-none focus:ring-2 focus:ring-matcha-500/50 transition"/>
+      </div>
+
+      <!-- 桌面端班级选择 -->
+      <div class="hidden md:flex items-center gap-3">
         <span class="text-xs text-slate-400 font-medium">当前班级：</span>
         <div class="bg-matcha-50 p-1 rounded-xl border border-matcha-100 flex gap-1">
           <button v-for="c in classOptions" :key="c" @click="currentClass = c"
@@ -109,57 +143,58 @@
           </button>
         </div>
         <button @click="manageClassNames" class="text-xs text-matcha-600 hover:text-matcha-800 flex items-center gap-1 bg-matcha-100/50 px-2.5 py-1.5 rounded-lg border border-matcha-200">
-          <i class="fa fa-pencil"></i> 修改班级名称
+          <i class="fa fa-pencil"></i> 修改班级
         </button>
       </div>
     </header>
 
     <!-- 动态视图区域 -->
-    <main class="flex-1 overflow-y-auto p-6 space-y-6">
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
 
       <!-- 1. 工作台 (Dashboard) -->
-      <div v-if="activeMenu === 'dashboard'" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div v-if="activeMenu === 'dashboard'" class="space-y-4 md:space-y-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <!-- 待办任务卡片 -->
-          <div @click="showTodoModal = true" class="card-style flex items-center gap-4 cursor-pointer hover:border-matcha-500 group">
-            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+          <div @click="showTodoModal = true" class="card-style flex flex-col md:flex-row items-start md:items-center gap-3 cursor-pointer hover:border-matcha-500 group">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg md:text-xl group-hover:scale-110 transition-transform">
               <i class="fa fa-tasks"></i>
             </div>
             <div>
-              <p class="text-xs text-slate-400 flex items-center gap-1">待办教学任务 <i class="fa fa-pencil text-[10px] text-amber-500"></i></p>
-              <h3 class="text-2xl font-bold text-slate-800 mt-0.5">{{ todos.filter(t => !t.done).length }} 项待办</h3>
+              <p class="text-[10px] md:text-xs text-slate-400 flex items-center gap-1">待办任务 <i class="fa fa-pencil text-[10px] text-amber-500"></i></p>
+              <h3 class="text-lg md:text-2xl font-bold text-slate-800 mt-0.5">{{ todos.filter(t => !t.done).length }} 项</h3>
             </div>
           </div>
 
-          <!-- 教学随记 / 随手备忘录卡片 -->
-          <div @click="showMemoModal = true" class="card-style flex items-center gap-4 cursor-pointer hover:border-matcha-500 group">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+          <!-- 教学随记卡片 -->
+          <div @click="showMemoModal = true" class="card-style flex flex-col md:flex-row items-start md:items-center gap-3 cursor-pointer hover:border-matcha-500 group">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg md:text-xl group-hover:scale-110 transition-transform">
               <i class="fa fa-sticky-note-o"></i>
             </div>
-            <div class="overflow-hidden flex-1">
-              <p class="text-xs text-slate-400 flex items-center gap-1">教学随记 <i class="fa fa-pencil text-[10px] text-emerald-500"></i></p>
-              <p class="text-xs font-semibold text-slate-700 mt-1 truncate">{{ memoText || '点击添加笔记...' }}</p>
+            <div class="overflow-hidden w-full">
+              <p class="text-[10px] md:text-xs text-slate-400 flex items-center gap-1">教学随记 <i class="fa fa-pencil text-[10px] text-emerald-500"></i></p>
+              <p class="text-xs font-semibold text-slate-700 mt-0.5 truncate">{{ memoText || '点击添加...' }}</p>
             </div>
           </div>
 
           <!-- 月考倒计时卡片 -->
-          <div @click="showExamModal = true" class="card-style flex items-center gap-4 cursor-pointer hover:border-rose-300 group">
-            <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+          <div @click="showExamModal = true" class="card-style flex flex-col md:flex-row items-start md:items-center gap-3 cursor-pointer hover:border-rose-300 group">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg md:text-xl group-hover:scale-110 transition-transform">
               <i class="fa fa-clock-o"></i>
             </div>
             <div>
-              <p class="text-xs text-slate-400 flex items-center gap-1">{{ examTitle }} <i class="fa fa-pencil text-[10px] text-rose-400"></i></p>
-              <h3 class="text-2xl font-bold text-rose-600 mt-0.5">{{ computedExamDays }} 天</h3>
+              <p class="text-[10px] md:text-xs text-slate-400 flex items-center gap-1 truncate">{{ examTitle }} <i class="fa fa-pencil text-[10px] text-rose-400"></i></p>
+              <h3 class="text-lg md:text-2xl font-bold text-rose-600 mt-0.5">{{ computedExamDays }} 天</h3>
             </div>
           </div>
 
-          <div class="card-style flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl">
+          <!-- 双班平均分卡片 -->
+          <div class="card-style flex flex-col md:flex-row items-start md:items-center gap-3">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center text-lg md:text-xl">
               <i class="fa fa-line-chart"></i>
             </div>
             <div>
-              <p class="text-xs text-slate-400">双班平均分</p>
-              <h3 class="text-2xl font-bold text-slate-800 mt-0.5">{{ getDoubleClassAvg() }} 分</h3>
+              <p class="text-[10px] md:text-xs text-slate-400">平均分</p>
+              <h3 class="text-lg md:text-2xl font-bold text-slate-800 mt-0.5">{{ getDoubleClassAvg() }} 分</h3>
             </div>
           </div>
         </div>
@@ -167,33 +202,33 @@
         <!-- 待办事项列表 -->
         <div class="card-style">
           <div class="flex justify-between items-center mb-3">
-            <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+            <h3 class="font-bold text-sm md:text-base text-slate-800 flex items-center gap-2">
               <i class="fa fa-list-ul text-matcha-500"></i> 待办事项
             </h3>
-            <button @click="showTodoModal = true" class="text-xs text-matcha-600 hover:underline">+ 管理/添加待办</button>
+            <button @click="showTodoModal = true" class="text-xs text-matcha-600 hover:underline">+ 管理</button>
           </div>
           <div class="space-y-2">
             <div v-for="(todo, idx) in todos" :key="idx" class="flex items-center justify-between p-2.5 bg-matcha-50/50 rounded-xl border border-matcha-100/60 text-xs">
-              <label class="flex items-center gap-2 cursor-pointer">
+              <label class="flex items-center gap-2 cursor-pointer max-w-[80%]">
                 <input type="checkbox" v-model="todo.done" @change="saveData" class="rounded text-matcha-500 focus:ring-matcha-500">
-                <span :class="{'line-through text-slate-400': todo.done, 'text-slate-700 font-medium': !todo.done}">{{ todo.text }}</span>
+                <span :class="{'line-through text-slate-400': todo.done, 'text-slate-700 font-medium': !todo.done}" class="truncate">{{ todo.text }}</span>
               </label>
-              <span class="text-[10px] bg-white text-slate-400 px-2 py-0.5 rounded-md border">{{ todo.date }}</span>
+              <span class="text-[10px] bg-white text-slate-400 px-1.5 py-0.5 rounded border shrink-0">{{ todo.date }}</span>
             </div>
           </div>
         </div>
 
         <!-- 班级简要学情 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div v-for="c in classOptions" :key="c" class="card-style border-t-4 border-t-matcha-500">
             <div class="flex justify-between items-center mb-3">
-              <h3 class="font-bold text-lg text-slate-800">{{ c }} 学情概览</h3>
-              <span class="text-xs bg-matcha-100 text-matcha-800 px-2.5 py-1 rounded-full font-medium">人数: {{ getStudents(c).length }}人</span>
+              <h3 class="font-bold text-base md:text-lg text-slate-800">{{ c }} 学情概览</h3>
+              <span class="text-xs bg-matcha-100 text-matcha-800 px-2 py-0.5 rounded-full font-medium">{{ getStudents(c).length }}人</span>
             </div>
-            <div class="space-y-2 text-sm text-slate-600">
+            <div class="space-y-2 text-xs md:text-sm text-slate-600">
               <div class="flex justify-between"><span>最近月考均分：</span><span class="font-bold text-matcha-700">{{ getClassAvg(c) }} 分</span></div>
               <div class="flex justify-between"><span>重点预警（<90分）：</span><span class="font-bold text-rose-500">{{ getWarningCount(c) }} 人</span></div>
-              <div class="flex justify-between"><span>主要薄弱知识点：</span><span class="text-slate-500">导数切线、解析几何联立</span></div>
+              <div class="flex justify-between"><span>主要薄弱知识点：</span><span class="text-slate-500 truncate max-w-[150px] md:max-w-none">导数切线、解析几何</span></div>
             </div>
             <button @click="currentClass = c; activeMenu = 'students'" class="mt-4 w-full py-2 bg-matcha-50 hover:bg-matcha-100 text-matcha-800 rounded-xl text-xs font-semibold transition">
               进入 {{ c }} 管理 →
@@ -206,11 +241,11 @@
       <div v-else-if="activeMenu === 'classes'" class="space-y-6">
         <div class="card-style">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-lg text-slate-800">班级概况列表</h3>
-            <button @click="manageClassNames" class="btn-matcha text-xs"><i class="fa fa-cog"></i> 修改班级名称</button>
+            <h3 class="font-bold text-base md:text-lg text-slate-800">班级概况列表</h3>
+            <button @click="manageClassNames" class="btn-matcha text-xs"><i class="fa fa-cog"></i> 修改班级</button>
           </div>
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
+            <table class="w-full text-left text-xs md:text-sm min-w-[500px]">
               <thead class="bg-matcha-50/60 text-matcha-800 font-semibold border-b border-matcha-100">
                 <tr>
                   <th class="p-3">班级名称</th>
@@ -229,8 +264,8 @@
                   <td class="p-3">28.5%</td>
                   <td class="p-3">82.0%</td>
                   <td class="p-3">
-                    <button @click="currentClass = c; activeMenu = 'students'" class="text-xs bg-matcha-500 text-white px-3 py-1.5 rounded-lg hover:bg-matcha-600 transition">
-                      进入班级管理
+                    <button @click="currentClass = c; activeMenu = 'students'" class="text-xs bg-matcha-500 text-white px-2.5 py-1 rounded-lg hover:bg-matcha-600 transition">
+                      管理
                     </button>
                   </td>
                 </tr>
@@ -241,56 +276,54 @@
       </div>
 
       <!-- 3. 学生管理 (Student Management) -->
-      <div v-else-if="activeMenu === 'students'" class="space-y-6">
+      <div v-else-if="activeMenu === 'students'" class="space-y-4 md:space-y-6">
         <div class="card-style">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <div>
-              <h3 class="font-bold text-lg text-slate-800">{{ currentClass }} - 学生档案</h3>
-            </div>
-            <div class="flex items-center gap-2">
-              <button @click="openAddStudentModal" class="px-3 py-1.5 bg-matcha-100 text-matcha-800 rounded-xl text-xs font-medium hover:bg-matcha-200">
-                <i class="fa fa-plus"></i> 添加学生
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h3 class="font-bold text-base md:text-lg text-slate-800">{{ currentClass }} - 学生档案</h3>
+            <div class="flex flex-wrap items-center gap-1.5 md:gap-2">
+              <button @click="openAddStudentModal" class="px-2.5 py-1.5 bg-matcha-100 text-matcha-800 rounded-xl text-xs font-medium hover:bg-matcha-200">
+                <i class="fa fa-plus"></i> 添加
               </button>
-              <button @click="isDesensitized = !isDesensitized" class="px-3 py-1.5 border border-matcha-200 rounded-xl text-xs font-medium hover:bg-matcha-50 text-slate-600">
+              <button @click="isDesensitized = !isDesensitized" class="px-2.5 py-1.5 border border-matcha-200 rounded-xl text-xs font-medium hover:bg-matcha-50 text-slate-600">
                 <i class="fa" :class="isDesensitized ? 'fa-eye' : 'fa-eye-slash'"></i> {{ isDesensitized ? '取消脱敏' : '脱敏' }}
               </button>
               <label class="btn-matcha cursor-pointer">
-                <i class="fa fa-upload"></i> 导入 Excel 名单
+                <i class="fa fa-upload"></i> 导入
                 <input type="file" accept=".xlsx, .xls" class="hidden" @change="importExcel" />
               </label>
             </div>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
+          <div class="overflow-x-auto -mx-2 md:mx-0">
+            <table class="w-full text-left text-xs md:text-sm min-w-[600px]">
               <thead class="bg-matcha-50/60 text-matcha-800 font-semibold border-b border-matcha-100">
                 <tr>
-                  <th class="p-3">学号</th>
-                  <th class="p-3">姓名</th>
-                  <th class="p-3">最近成绩</th>
-                  <th class="p-3">薄弱板块</th>
-                  <th class="p-3">辅导日志</th>
-                  <th class="p-3 text-right">操作</th>
+                  <th class="p-2.5 md:p-3">学号</th>
+                  <th class="p-2.5 md:p-3">姓名</th>
+                  <th class="p-2.5 md:p-3">最近成绩</th>
+                  <th class="p-2.5 md:p-3">薄弱板块</th>
+                  <th class="p-2.5 md:p-3">辅导日志</th>
+                  <th class="p-2.5 md:p-3 text-right">操作</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="s in filteredStudents" :key="s.id" class="hover:bg-matcha-50/20">
-                  <td class="p-3 font-mono text-xs text-slate-500 font-bold">{{ s.no }}</td>
-                  <td class="p-3 font-semibold text-slate-700">
+                  <td class="p-2.5 md:p-3 font-mono text-xs text-slate-500 font-bold">{{ s.no }}</td>
+                  <td class="p-2.5 md:p-3 font-semibold text-slate-700">
                     {{ isDesensitized ? desensitizeName(s.name) : s.name }}
                   </td>
-                  <td class="p-3">
+                  <td class="p-2.5 md:p-3">
                     <button @click="viewStudentAnalytics(s)" title="点击查看历次成绩趋势"
-                            :class="s.score >= 120 ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : s.score >= 90 ? 'bg-sky-100 text-sky-700 hover:bg-sky-200' : 'bg-rose-100 text-rose-700 hover:bg-rose-200'"
-                            class="px-2.5 py-1 rounded-md font-bold text-xs transition flex items-center gap-1.5">
+                            :class="s.score >= 120 ? 'bg-emerald-100 text-emerald-700' : s.score >= 90 ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-700'"
+                            class="px-2 py-0.5 md:px-2.5 md:py-1 rounded-md font-bold text-xs transition flex items-center gap-1">
                       <i class="fa fa-line-chart text-[10px]"></i>
-                      {{ s.score }} 分
+                      {{ s.score }}分
                     </button>
                   </td>
-                  <td class="p-3 text-xs text-rose-500 font-medium">{{ s.weakness || '无' }}</td>
-                  <td class="p-3 text-xs text-slate-500 max-w-xs truncate">{{ s.notes || '暂无' }}</td>
-                  <td class="p-3 text-right space-x-2">
-                    <button @click="openEditStudentModal(s)" class="text-xs text-matcha-700 hover:text-matcha-900 bg-matcha-50 px-2.5 py-1 rounded-lg border border-matcha-200 hover:bg-matcha-100 transition">编辑</button>
+                  <td class="p-2.5 md:p-3 text-xs text-rose-500 font-medium max-w-[100px] truncate">{{ s.weakness || '无' }}</td>
+                  <td class="p-2.5 md:p-3 text-xs text-slate-500 max-w-[120px] truncate">{{ s.notes || '暂无' }}</td>
+                  <td class="p-2.5 md:p-3 text-right space-x-1.5 whitespace-nowrap">
+                    <button @click="openEditStudentModal(s)" class="text-xs text-matcha-700 bg-matcha-50 px-2 py-0.5 rounded border border-matcha-200">编辑</button>
                     <button @click="deleteStudent(s)" class="text-xs text-rose-500 hover:underline">删除</button>
                   </td>
                 </tr>
@@ -301,51 +334,48 @@
       </div>
 
       <!-- 4. 教学课表 -->
-      <div v-else-if="activeMenu === 'schedule'" class="space-y-6">
+      <div v-else-if="activeMenu === 'schedule'" class="space-y-4 md:space-y-6">
         <div class="card-style">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <div>
-              <h3 class="font-bold text-lg text-slate-800">课程表</h3>
-            </div>
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+            <h3 class="font-bold text-base md:text-lg text-slate-800">课程表</h3>
             
-            <div class="flex items-center gap-4 bg-matcha-50/60 p-2 rounded-xl border border-matcha-100 text-xs">
-              <div v-for="(cls, idx) in classOptions" :key="cls" class="flex items-center gap-1.5">
+            <div class="flex flex-wrap items-center gap-2 bg-matcha-50/60 p-2 rounded-xl border border-matcha-100 text-xs">
+              <div v-for="(cls, idx) in classOptions" :key="cls" class="flex items-center gap-1">
                 <span class="font-bold text-slate-700">{{ cls }}:</span>
-                <select v-model="classColors[idx]" @change="saveData" class="border rounded px-1.5 py-0.5 bg-white text-xs outline-none">
+                <select v-model="classColors[idx]" @change="saveData" class="border rounded px-1 py-0.5 bg-white text-[10px] outline-none">
                   <option value="bg-matcha-500 text-white">抹茶绿</option>
                   <option value="bg-sky-500 text-white">天空蓝</option>
                   <option value="bg-emerald-500 text-white">薄荷绿</option>
                   <option value="bg-amber-500 text-white">琥珀黄</option>
                   <option value="bg-rose-500 text-white">珊瑚粉</option>
-                  <option value="bg-indigo-500 text-white">靛蓝色</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <div class="overflow-x-auto">
-            <div class="min-w-[700px]">
-              <div class="grid grid-cols-6 gap-2 text-center text-xs mb-2">
+          <div class="overflow-x-auto -mx-2 md:mx-0">
+            <div class="min-w-[650px] p-2">
+              <div class="grid grid-cols-6 gap-1.5 text-center text-xs mb-2">
                 <div class="bg-matcha-100/80 font-bold py-2 rounded-lg text-matcha-800">节次 / 时间</div>
                 <div v-for="day in ['周一','周二','周三','周四','周五']" :key="day" class="bg-matcha-100/80 font-bold py-2 rounded-lg text-matcha-800">{{ day }}</div>
               </div>
 
               <div class="space-y-1.5">
-                <div v-for="(slot, slotIdx) in timeSlots" :key="slotIdx" class="grid grid-cols-6 gap-2 text-center text-xs">
-                  <div class="bg-slate-50 py-2.5 px-1 rounded-lg border border-slate-100 flex flex-col justify-center items-center">
-                    <span class="font-bold text-slate-700">{{ slot.name }}</span>
-                    <span class="text-[10px] text-slate-400 font-mono mt-0.5">{{ slot.time }}</span>
+                <div v-for="(slot, slotIdx) in timeSlots" :key="slotIdx" class="grid grid-cols-6 gap-1.5 text-center text-xs">
+                  <div class="bg-slate-50 py-2 px-1 rounded-lg border border-slate-100 flex flex-col justify-center items-center">
+                    <span class="font-bold text-slate-700 scale-90 md:scale-100">{{ slot.name }}</span>
+                    <span class="text-[9px] text-slate-400 font-mono scale-90">{{ slot.time }}</span>
                   </div>
 
                   <div v-for="dIdx in 5" :key="dIdx" 
                        @click="editScheduleCell(slotIdx, dIdx - 1)"
-                       class="p-2 rounded-lg border border-slate-100 bg-white hover:border-matcha-500 transition cursor-pointer flex items-center justify-center min-h-[46px] group">
+                       class="p-1 rounded-lg border border-slate-100 bg-white hover:border-matcha-500 transition cursor-pointer flex items-center justify-center min-h-[42px] group">
                     <span v-if="timetable[slotIdx] && timetable[slotIdx][dIdx - 1]" 
                           :class="getCellClass(timetable[slotIdx][dIdx - 1])"
-                          class="font-bold py-1 px-2 rounded-md shadow-sm w-full truncate">
+                          class="font-bold py-1 px-1.5 rounded text-[11px] shadow-sm w-full truncate">
                       {{ timetable[slotIdx][dIdx - 1] }}
                     </span>
-                    <span v-else class="text-slate-300 group-hover:text-matcha-500 text-[11px]">+ 排课</span>
+                    <span v-else class="text-slate-300 group-hover:text-matcha-500 text-[10px]">+ 排课</span>
                   </div>
                 </div>
               </div>
@@ -355,73 +385,66 @@
         </div>
       </div>
 
-      <!-- 5. 备课中心 (Lesson Prep) -->
-      <div v-else-if="activeMenu === 'prep'" class="space-y-6">
+      <!-- 5. 备课中心 -->
+      <div v-else-if="activeMenu === 'prep'" class="space-y-4 md:space-y-6">
         <div class="card-style">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-lg text-slate-800">备课资源链接</h3>
-            <button @click="addPrepLink" class="btn-matcha text-xs"><i class="fa fa-plus"></i> 添加链接</button>
+            <h3 class="font-bold text-base md:text-lg text-slate-800">备课资源</h3>
+            <button @click="addPrepLink" class="btn-matcha text-xs"><i class="fa fa-plus"></i> 添加</button>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a v-for="link in prepLinks" :key="link.title" :href="link.url" target="_blank" class="p-4 border border-matcha-100 rounded-xl hover:bg-matcha-50 transition block">
-              <div class="font-bold text-matcha-800 mb-1"><i class="fa fa-bookmark text-matcha-500 mr-2"></i>{{ link.title }}</div>
-              <p class="text-xs text-slate-400 truncate">{{ link.url }}</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <a v-for="link in prepLinks" :key="link.title" :href="link.url" target="_blank" class="p-3 md:p-4 border border-matcha-100 rounded-xl hover:bg-matcha-50 transition block">
+              <div class="font-bold text-xs md:text-sm text-matcha-800 mb-1 truncate"><i class="fa fa-bookmark text-matcha-500 mr-2"></i>{{ link.title }}</div>
+              <p class="text-[10px] text-slate-400 truncate">{{ link.url }}</p>
             </a>
           </div>
         </div>
       </div>
 
       <!-- 6. 学情分析 (Analytics) -->
-      <div v-else-if="activeMenu === 'analytics'" class="space-y-6">
+      <div v-else-if="activeMenu === 'analytics'" class="space-y-4 md:space-y-6">
         <div class="card-style">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <div>
-              <h3 class="font-bold text-lg text-slate-800">{{ currentClass }} - 成绩分析</h3>
-            </div>
-            
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-500 font-medium">查看学生：</span>
-              <select v-model="selectedStudentForChart" class="border rounded-xl px-3 py-1.5 text-xs bg-matcha-50 outline-none">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+            <h3 class="font-bold text-base md:text-lg text-slate-800">{{ currentClass }} - 成绩趋势分析</h3>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+              <span class="text-xs text-slate-500 font-medium shrink-0">选择学生：</span>
+              <select v-model="selectedStudentForChart" class="w-full md:w-auto border rounded-xl px-3 py-1.5 text-xs bg-matcha-50 outline-none">
                 <option value="">-- 全班成绩分布 --</option>
                 <option v-for="s in getStudents(currentClass)" :key="s.id" :value="s.name">{{ s.name }} (个人趋势)</option>
               </select>
             </div>
           </div>
 
-          <div id="analyticsChart" class="w-full h-80"></div>
+          <div id="analyticsChart" class="w-full h-72 md:h-80"></div>
         </div>
       </div>
 
       <!-- 7. 公式工具中心 -->
-      <div v-else-if="activeMenu === 'formulas'" class="space-y-6">
+      <div v-else-if="activeMenu === 'formulas'" class="space-y-4 md:space-y-6">
         <div class="card-style">
-          <div class="flex justify-between items-center mb-4">
-            <div>
-              <h3 class="font-bold text-lg text-slate-800">LaTeX 公式模板库</h3>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h3 class="font-bold text-base md:text-lg text-slate-800 mb-4">LaTeX 公式模板库</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div v-for="f in formulaList" :key="f.title" 
                  @click="copyFormula(f.code)"
-                 class="p-4 border border-matcha-100 rounded-xl hover:border-matcha-500 cursor-pointer transition bg-matcha-50/30">
+                 class="p-3 md:p-4 border border-matcha-100 rounded-xl hover:border-matcha-500 cursor-pointer transition bg-matcha-50/30">
               <div class="flex justify-between items-center mb-1">
                 <span class="font-bold text-xs text-matcha-800"><i class="fa fa-square text-[10px] text-matcha-500 mr-1"></i>{{ f.title }}</span>
-                <span class="text-[10px] bg-matcha-200 text-matcha-800 px-1.5 py-0.5 rounded">点击复制</span>
+                <span class="text-[9px] bg-matcha-200 text-matcha-800 px-1.5 py-0.5 rounded">点击复制</span>
               </div>
-              <p class="font-mono text-xs text-slate-600 bg-white p-2 rounded border border-slate-100 mt-2">{{ f.code }}</p>
+              <p class="font-mono text-xs text-slate-600 bg-white p-2 rounded border border-slate-100 mt-2 overflow-x-auto">{{ f.code }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 8. AI 教学助手 -->
-      <div v-else-if="activeMenu === 'ai'" class="space-y-6">
+      <div v-else-if="activeMenu === 'ai'" class="space-y-4 md:space-y-6">
         <div class="card-style">
-          <h3 class="font-bold text-lg text-slate-800 mb-2"><i class="fa fa-magic text-matcha-500 mr-2"></i>AI 试题生成器</h3>
+          <h3 class="font-bold text-base md:text-lg text-slate-800 mb-2"><i class="fa fa-magic text-matcha-500 mr-2"></i>AI 试题生成器</h3>
           <div class="space-y-3">
-            <input type="text" v-model="aiPrompt" placeholder="输入知识点与题型..." class="w-full border rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50"/>
-            <button @click="generateAIQuestion" class="btn-matcha text-xs"><i class="fa fa-flash"></i> 生成试题与解析</button>
-            <div v-if="aiResponse" class="mt-4 p-4 bg-matcha-50 rounded-xl border border-matcha-100 text-xs font-mono whitespace-pre-line text-slate-700">
+            <input type="text" v-model="aiPrompt" placeholder="输入知识点与题型..." class="w-full border rounded-xl p-2.5 md:p-3 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50"/>
+            <button @click="generateAIQuestion" class="btn-matcha text-xs w-full md:w-auto"><i class="fa fa-flash"></i> 生成试题与解析</button>
+            <div v-if="aiResponse" class="mt-4 p-3 md:p-4 bg-matcha-50 rounded-xl border border-matcha-100 text-xs font-mono whitespace-pre-line text-slate-700">
               {{ aiResponse }}
             </div>
           </div>
@@ -429,11 +452,11 @@
       </div>
 
       <!-- 9. 家校沟通 -->
-      <div v-else-if="activeMenu === 'communication'" class="space-y-6">
+      <div v-else-if="activeMenu === 'communication'" class="space-y-4 md:space-y-6">
         <div class="card-style">
-          <h3 class="font-bold text-lg text-slate-800 mb-2"><i class="fa fa-comments text-matcha-500 mr-2"></i>家长回复生成器</h3>
-          <textarea v-model="parentMessage" rows="3" class="w-full border rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50" placeholder="输入家长的消息内容..."></textarea>
-          <button @click="generateParentReplies" class="btn-matcha mt-3 text-xs">生成回复</button>
+          <h3 class="font-bold text-base md:text-lg text-slate-800 mb-2"><i class="fa fa-comments text-matcha-500 mr-2"></i>家长回复生成器</h3>
+          <textarea v-model="parentMessage" rows="3" class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50" placeholder="输入家长的消息内容..."></textarea>
+          <button @click="generateParentReplies" class="btn-matcha mt-2 text-xs w-full md:w-auto">生成回复</button>
 
           <div v-if="parentReplies.length" class="mt-4 space-y-3">
             <div v-for="(reply, idx) in parentReplies" :key="idx" class="p-3 bg-matcha-50 border border-matcha-100 rounded-xl text-xs space-y-1">
@@ -445,20 +468,20 @@
       </div>
 
       <!-- 10. 设置 -->
-      <div v-else-if="activeMenu === 'settings'" class="space-y-6">
+      <div v-else-if="activeMenu === 'settings'" class="space-y-4 md:space-y-6">
         <div class="card-style space-y-4">
-          <h3 class="font-bold text-lg text-slate-800 border-b pb-3">系统设置</h3>
+          <h3 class="font-bold text-base md:text-lg text-slate-800 border-b pb-3">系统设置</h3>
           <div class="flex items-center justify-between">
             <div>
-              <p class="font-bold text-sm text-slate-800">本地数据备份</p>
+              <p class="font-bold text-xs md:text-sm text-slate-800">本地数据备份</p>
             </div>
             <button @click="backupData" class="btn-matcha text-xs">导出备份</button>
           </div>
           <div class="flex items-center justify-between border-t pt-4">
             <div>
-              <p class="font-bold text-sm text-rose-600">清空所有数据</p>
+              <p class="font-bold text-xs md:text-sm text-rose-600">清空所有数据</p>
             </div>
-            <button @click="clearAllData" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-medium transition">重置</button>
+            <button @click="clearAllData" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-medium transition">重置</button>
           </div>
         </div>
       </div>
@@ -466,12 +489,12 @@
     </main>
   </div>
 
-  <!-- 弹窗：编辑/新增学生综合弹窗 Modal -->
-  <div v-if="showStudentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-white rounded-2xl p-6 w-96 shadow-xl space-y-4">
+  <!-- 弹窗：编辑/新增学生综合 Modal (移动端自适应全屏/居中) -->
+  <div v-if="showStudentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl space-y-3">
       <div class="flex justify-between items-center border-b pb-2">
-        <h3 class="font-bold text-base text-slate-800">{{ isEditingStudent ? '编辑学生档案' : '新增学生档案' }}</h3>
-        <button @click="showStudentModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+        <h3 class="font-bold text-sm md:text-base text-slate-800">{{ isEditingStudent ? '编辑学生档案' : '新增学生档案' }}</h3>
+        <button @click="showStudentModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
       </div>
       <div class="space-y-3 text-xs">
         <div>
@@ -503,11 +526,11 @@
   </div>
 
   <!-- 弹窗 1：待办事项 Modal -->
-  <div v-if="showTodoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-white rounded-2xl p-6 w-96 shadow-xl space-y-4">
+  <div v-if="showTodoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
       <div class="flex justify-between items-center border-b pb-2">
-        <h3 class="font-bold text-base text-slate-800">待办任务</h3>
-        <button @click="showTodoModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+        <h3 class="font-bold text-sm md:text-base text-slate-800">待办任务</h3>
+        <button @click="showTodoModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
       </div>
       <div class="flex gap-2">
         <input type="text" v-model="newTodoText" placeholder="输入新待办..." class="flex-1 border rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-matcha-500">
@@ -524,25 +547,23 @@
   </div>
 
   <!-- 弹窗 2：教学随记 Modal -->
-  <div v-if="showMemoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-white rounded-2xl p-6 w-96 shadow-xl space-y-4">
+  <div v-if="showMemoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
       <div class="flex justify-between items-center border-b pb-2">
-        <h3 class="font-bold text-base text-slate-800">教学随记</h3>
-        <button @click="showMemoModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+        <h3 class="font-bold text-sm md:text-base text-slate-800">教学随记</h3>
+        <button @click="showMemoModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
       </div>
       <textarea v-model="memoText" rows="5" class="w-full border rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-matcha-500" placeholder="输入随记..."></textarea>
-      <div class="flex gap-2">
-        <button @click="saveData(); showMemoModal = false" class="btn-matcha w-full text-xs">保存</button>
-      </div>
+      <button @click="saveData(); showMemoModal = false" class="btn-matcha w-full text-xs">保存</button>
     </div>
   </div>
 
   <!-- 弹窗 3：月考日期设置 Modal -->
-  <div v-if="showExamModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-white rounded-2xl p-6 w-96 shadow-xl space-y-4">
+  <div v-if="showExamModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
       <div class="flex justify-between items-center border-b pb-2">
-        <h3 class="font-bold text-base text-slate-800">倒计时设置</h3>
-        <button @click="showExamModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+        <h3 class="font-bold text-sm md:text-base text-slate-800">倒计时设置</h3>
+        <button @click="showExamModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
       </div>
       <div class="space-y-3 text-xs">
         <div>
@@ -565,6 +586,8 @@
 
   createApp({
     setup() {
+      const isMobileMenuOpen = ref(false);
+
       const menuList = [
         { key: 'dashboard', label: '工作台', icon: 'fa fa-dashboard' },
         { key: 'classes', label: '我的班级', icon: 'fa fa-users' },
@@ -586,6 +609,11 @@
 
       const classColors = ref(['bg-matcha-500 text-white', 'bg-sky-500 text-white']);
 
+      const switchMenu = (key) => {
+        activeMenu.value = key;
+        isMobileMenuOpen.value = false; // 移动端选择后收起导航
+      };
+
       const getCellClass = (text) => {
         if (text.includes(classOptions.value[0])) return classColors.value[0];
         if (text.includes(classOptions.value[1])) return classColors.value[1];
@@ -593,19 +621,19 @@
       };
 
       const timeSlots = [
-        { name: '第一节', time: '08:00 - 08:40' },
-        { name: '第二节', time: '08:50 - 09:30' },
-        { name: '第三节', time: '10:05 - 10:45' },
-        { name: '第四节', time: '10:55 - 11:35' },
-        { name: '第五节', time: '11:45 - 12:25' },
-        { name: '第六节', time: '14:20 - 15:00' },
-        { name: '第七节', time: '15:10 - 15:50' },
-        { name: '第八节', time: '16:05 - 16:45' },
-        { name: '高中班务', time: '17:50 - 18:30' },
-        { name: '高中晚一', time: '18:40 - 19:20' },
-        { name: '晚二', time: '19:30 - 20:10' },
-        { name: '晚三', time: '20:20 - 21:00' },
-        { name: '延时辅导', time: '21:20 - 22:00' },
+        { name: '第一节', time: '08:00' },
+        { name: '第二节', time: '08:50' },
+        { name: '第三节', time: '10:05' },
+        { name: '第四节', time: '10:55' },
+        { name: '第五节', time: '11:45' },
+        { name: '第六节', time: '14:20' },
+        { name: '第七节', time: '15:10' },
+        { name: '第八节', time: '16:05' },
+        { name: '班务', time: '17:50' },
+        { name: '晚一', time: '18:40' },
+        { name: '晚二', time: '19:30' },
+        { name: '晚三', time: '20:20' },
+        { name: '延时', time: '21:20' },
       ];
 
       const todos = ref([
@@ -746,22 +774,13 @@
       const showStudentModal = ref(false);
       const isEditingStudent = ref(false);
       const currentEditingId = ref(null);
-      const studentForm = ref({
-        no: '',
-        name: '',
-        score: 0,
-        weakness: '',
-        notes: ''
-      });
+      const studentForm = ref({ no: '', name: '', score: 0, weakness: '', notes: '' });
 
       const openAddStudentModal = () => {
         isEditingStudent.value = false;
         studentForm.value = {
           no: `20240${getStudents(currentClass.value).length + 1}`,
-          name: '',
-          score: 0,
-          weakness: '',
-          notes: ''
+          name: '', score: 0, weakness: '', notes: ''
         };
         showStudentModal.value = true;
       };
@@ -770,11 +789,7 @@
         isEditingStudent.value = true;
         currentEditingId.value = s.id;
         studentForm.value = {
-          no: s.no,
-          name: s.name,
-          score: s.score,
-          weakness: s.weakness || '',
-          notes: s.notes || ''
+          no: s.no, name: s.name, score: s.score, weakness: s.weakness || '', notes: s.notes || ''
         };
         showStudentModal.value = true;
       };
@@ -876,15 +891,10 @@
         { title: '等差数列通项与前n项和', code: 'a_n = a_1 + (n-1)d, \\quad S_n = \\frac{n(a_1 + a_n)}{2}' },
         { title: '等比数列前n项和', code: 'S_n = \\frac{a_1(1-q^n)}{1-q} \\quad (q \\neq 1)' },
         { title: '基本不等式', code: 'a + b \\ge 2\\sqrt{ab} \\quad (a>0, b>0)' },
-        { title: '椭圆标准方程与离心率', code: '\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1, \\quad e = \\frac{c}{a} = \\sqrt{1 - \\frac{b^2}{a^2}}' },
-        { title: '双曲线标准方程与渐近线', code: '\\frac{x^2}{a^2} - \\frac{y^2}{b^2} = 1, \\quad y = \\pm \\frac{b}{a}x' },
-        { title: '抛物线标准方程与焦点', code: 'y^2 = 2px \\quad (p>0), \\quad F\\left(\\frac{p}{2}, 0\\right)' },
-        { title: '常见导数公式', code: '(x^n)\' = n x^{n-1}, \\quad (e^x)\ me= e^x, \\quad (\\ln x)\' = \\frac{1}{x}' },
+        { title: '椭圆标准方程与离心率', code: '\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1, \\quad e = \\frac{c}{a}' },
+        { title: '双曲线标准方程', code: '\\frac{x^2}{a^2} - \\frac{y^2}{b^2} = 1' },
+        { title: '抛物线标准方程', code: 'y^2 = 2px \\quad (p>0)' },
         { title: '导数切线方程', code: 'y - f(x_0) = f\'(x_0)(x - x_0)' },
-        { title: '排列数与组合数公式', code: 'A_n^m = \\frac{n!}{(n-m)!}, \\quad C_n^m = \\frac{n!}{m!(n-m)!}' },
-        { title: '二项式定理', code: '(a+b)^n = \\sum_{k=0}^{n} C_n^k a^{n-k} b^k' },
-        { title: '球的体积与表面积', code: 'V = \\frac{4}{3}\\pi R^3, \\quad S = 4\\pi R^2' },
-        { title: '极坐标与直角坐标转换', code: 'x = \\rho \\cos\\theta, \\quad y = \\rho \\sin\\theta, \\quad x^2 + y^2 = \\rho^2' },
       ]);
 
       const copyFormula = (code) => {
@@ -920,11 +930,12 @@
           if (selectedStudentForChart.value) {
             const student = list.find(s => s.name === selectedStudentForChart.value);
             const historyData = (student && student.history && student.history.length) ? student.history : [student ? student.score : 0];
-            const xData = historyData.map((_, i) => `第 ${i + 1} 次调考`);
+            const xData = historyData.map((_, i) => `第 ${i + 1} 次`);
 
             chartInstance.setOption({
-              title: { text: `${selectedStudentForChart.value} - 历次成绩趋势`, left: 'center', textStyle: { fontSize: 14 } },
+              title: { text: `${selectedStudentForChart.value} - 历次成绩趋势`, left: 'center', textStyle: { fontSize: 13 } },
               tooltip: { trigger: 'axis' },
+              grid: { left: '10%', right: '5%', bottom: '15%', top: '20%' },
               xAxis: { type: 'category', data: xData },
               yAxis: { type: 'value', min: 0, max: 150 },
               series: [{
@@ -938,19 +949,25 @@
             });
           } else {
             chartInstance.setOption({
-              title: { text: `${currentClass.value} - 成绩分布`, left: 'center', textStyle: { fontSize: 14 } },
+              title: { text: `${currentClass.value} - 全班分布`, left: 'center', textStyle: { fontSize: 13 } },
               tooltip: { trigger: 'axis' },
+              grid: { left: '10%', right: '5%', bottom: '15%', top: '20%' },
               xAxis: { type: 'category', data: list.map(s => isDesensitized.value ? desensitizeName(s.name) : s.name) },
               yAxis: { type: 'value', min: 0, max: 150 },
               series: [{
                 data: list.map(s => s.score),
                 type: 'bar',
-                itemStyle: { color: '#6b9e78', borderRadius: [8, 8, 0, 0] }
+                itemStyle: { color: '#6b9e78', borderRadius: [6, 6, 0, 0] }
               }]
             });
           }
         });
       };
+
+      // 监听窗口大小变化以重新渲染图表
+      window.addEventListener('resize', () => {
+        if (chartInstance) chartInstance.resize();
+      });
 
       watch([activeMenu, currentClass, isDesensitized, selectedStudentForChart], () => {
         if (activeMenu.value === 'analytics') renderChart();
@@ -976,6 +993,7 @@
       });
 
       return {
+        isMobileMenuOpen, switchMenu,
         menuList, activeMenu, searchQuery, classOptions, currentClass,
         studentsData, getStudents, getClassAvg, getDoubleClassAvg, getWarningCount, filteredStudents,
         isDesensitized, desensitizeName, importExcel, deleteStudent,
