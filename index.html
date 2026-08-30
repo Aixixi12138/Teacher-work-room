@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>工作台 </title>
+  <title>数学教学工作台 </title>
   <!-- Tailwind CSS & Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
@@ -105,7 +105,7 @@
   <!-- ================= 右侧主页面内容区 ================= -->
   <div class="flex-1 flex flex-col overflow-hidden w-full">
 
-    <!-- 顶部全局搜索与班级切换区（响应式适配） -->
+    <!-- 顶部全局搜索与班级切换区 -->
     <header class="bg-white border-b border-matcha-100 px-4 md:px-6 py-3 flex flex-col md:flex-row gap-3 md:gap-0 justify-between items-stretch md:items-center z-10">
       
       <!-- 移动端顶部标题栏与菜单触发按钮 -->
@@ -193,7 +193,7 @@
               <i class="fa fa-line-chart"></i>
             </div>
             <div>
-              <p class="text-[10px] md:text-xs text-slate-400">平均分</p>
+              <p class="text-[10px] md:text-xs text-slate-400">双班平均分</p>
               <h3 class="text-lg md:text-2xl font-bold text-slate-800 mt-0.5">{{ getDoubleClassAvg() }} 分</h3>
             </div>
           </div>
@@ -227,8 +227,8 @@
             </div>
             <div class="space-y-2 text-xs md:text-sm text-slate-600">
               <div class="flex justify-between"><span>最近月考均分：</span><span class="font-bold text-matcha-700">{{ getClassAvg(c) }} 分</span></div>
-              <div class="flex justify-between"><span>重点预警（<90分）：</span><span class="font-bold text-rose-500">{{ getWarningCount(c) }} 人</span></div>
-              <div class="flex justify-between"><span>主要薄弱知识点：</span><span class="text-slate-500 truncate max-w-[150px] md:max-w-none">导数切线、解析几何</span></div>
+              <div class="flex justify-between"><span>及格率 (≥90分)：</span><span class="font-bold text-sky-600">{{ getPassRate(c) }}</span></div>
+              <div class="flex justify-between"><span>重点预警 (<90分)：</span><span class="font-bold text-rose-500">{{ getWarningCount(c) }} 人</span></div>
             </div>
             <button @click="currentClass = c; activeMenu = 'students'" class="mt-4 w-full py-2 bg-matcha-50 hover:bg-matcha-100 text-matcha-800 rounded-xl text-xs font-semibold transition">
               进入 {{ c }} 管理 →
@@ -237,7 +237,7 @@
         </div>
       </div>
 
-      <!-- 2. 我的班级 (My Classes) -->
+      <!-- 2. 我的班级 (My Classes) - 动态计算及格率与优秀率 -->
       <div v-else-if="activeMenu === 'classes'" class="space-y-6">
         <div class="card-style">
           <div class="flex justify-between items-center mb-4">
@@ -261,8 +261,8 @@
                   <td class="p-3 font-bold text-slate-800">{{ c }}</td>
                   <td class="p-3">{{ getStudents(c).length }} 人</td>
                   <td class="p-3 font-bold text-matcha-700">{{ getClassAvg(c) }} 分</td>
-                  <td class="p-3">28.5%</td>
-                  <td class="p-3">82.0%</td>
+                  <td class="p-3 font-semibold text-emerald-600">{{ getExcellentRate(c) }}</td>
+                  <td class="p-3 font-semibold text-sky-600">{{ getPassRate(c) }}</td>
                   <td class="p-3">
                     <button @click="currentClass = c; activeMenu = 'students'" class="text-xs bg-matcha-500 text-white px-2.5 py-1 rounded-lg hover:bg-matcha-600 transition">
                       管理
@@ -489,7 +489,7 @@
     </main>
   </div>
 
-  <!-- 弹窗：编辑/新增学生综合 Modal (移动端自适应全屏/居中) -->
+  <!-- 弹窗：编辑/新增学生综合 Modal -->
   <div v-if="showStudentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl space-y-3">
       <div class="flex justify-between items-center border-b pb-2">
@@ -611,7 +611,7 @@
 
       const switchMenu = (key) => {
         activeMenu.value = key;
-        isMobileMenuOpen.value = false; // 移动端选择后收起导航
+        isMobileMenuOpen.value = false;
       };
 
       const getCellClass = (text) => {
@@ -747,6 +747,23 @@
         if (!list.length) return 0;
         return (list.reduce((sum, s) => sum + s.score, 0) / list.length).toFixed(1);
       };
+
+      // 实时计算及格率 (≥90分)
+      const getPassRate = (cls) => {
+        const list = getStudents(cls);
+        if (!list.length) return '0.0%';
+        const passCount = list.filter(s => s.score >= 90).length;
+        return ((passCount / list.length) * 100).toFixed(1) + '%';
+      };
+
+      // 实时计算优秀率 (≥120分)
+      const getExcellentRate = (cls) => {
+        const list = getStudents(cls);
+        if (!list.length) return '0.0%';
+        const excCount = list.filter(s => s.score >= 120).length;
+        return ((excCount / list.length) * 100).toFixed(1) + '%';
+      };
+
       const getDoubleClassAvg = () => {
         let total = 0, count = 0;
         classOptions.value.forEach(c => {
@@ -770,7 +787,6 @@
         return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
       };
 
-      // 学生 编辑/新增 综合 Modal 控制
       const showStudentModal = ref(false);
       const isEditingStudent = ref(false);
       const currentEditingId = ref(null);
@@ -964,7 +980,6 @@
         });
       };
 
-      // 监听窗口大小变化以重新渲染图表
       window.addEventListener('resize', () => {
         if (chartInstance) chartInstance.resize();
       });
@@ -995,7 +1010,7 @@
       return {
         isMobileMenuOpen, switchMenu,
         menuList, activeMenu, searchQuery, classOptions, currentClass,
-        studentsData, getStudents, getClassAvg, getDoubleClassAvg, getWarningCount, filteredStudents,
+        studentsData, getStudents, getClassAvg, getPassRate, getExcellentRate, getDoubleClassAvg, getWarningCount, filteredStudents,
         isDesensitized, desensitizeName, importExcel, deleteStudent,
         showStudentModal, isEditingStudent, studentForm, openAddStudentModal, openEditStudentModal, saveStudentForm,
         prepLinks, addPrepLink, formulaList, copyFormula, aiPrompt, aiResponse, generateAIQuestion,
