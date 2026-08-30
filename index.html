@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>数学教学工作台 - 精简高效版</title>
+  <title>数学教学工作台</title>
   <!-- Tailwind CSS & Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
@@ -81,8 +81,8 @@
         师
       </div>
       <div class="overflow-hidden">
-        <p class="text-sm font-bold text-matcha-800 truncate">陈老师</p>
-        <p class="text-xs text-slate-400 truncate">数学任课教师 ({{ classOptions.join('/') }})</p>
+        <p class="text-sm font-bold text-matcha-800 truncate">陈Sir </p>
+        <p class="text-xs text-slate-400 truncate">数学 ({{ classOptions.join('/') }})</p>
       </div>
     </div>
   </aside>
@@ -248,7 +248,7 @@
               <h3 class="font-bold text-lg text-slate-800">{{ currentClass }} - 学生档案</h3>
             </div>
             <div class="flex items-center gap-2">
-              <button @click="addStudentPrompt" class="px-3 py-1.5 bg-matcha-100 text-matcha-800 rounded-xl text-xs font-medium hover:bg-matcha-200">
+              <button @click="openAddStudentModal" class="px-3 py-1.5 bg-matcha-100 text-matcha-800 rounded-xl text-xs font-medium hover:bg-matcha-200">
                 <i class="fa fa-plus"></i> 添加学生
               </button>
               <button @click="isDesensitized = !isDesensitized" class="px-3 py-1.5 border border-matcha-200 rounded-xl text-xs font-medium hover:bg-matcha-50 text-slate-600">
@@ -276,23 +276,21 @@
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="s in filteredStudents" :key="s.id" class="hover:bg-matcha-50/20">
                   <td class="p-3 font-mono text-xs text-slate-500 font-bold">{{ s.no }}</td>
-                  <td class="p-3 font-semibold">
-                    <button @click="viewStudentAnalytics(s)" class="text-matcha-700 hover:text-matcha-500 hover:underline flex items-center gap-1">
-                      <i class="fa fa-line-chart text-xs"></i>
-                      {{ isDesensitized ? desensitizeName(s.name) : s.name }}
-                    </button>
+                  <td class="p-3 font-semibold text-slate-700">
+                    {{ isDesensitized ? desensitizeName(s.name) : s.name }}
                   </td>
                   <td class="p-3">
-                    <span :class="s.score >= 120 ? 'bg-emerald-100 text-emerald-700' : s.score >= 90 ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-700'"
-                          class="px-2 py-0.5 rounded-md font-bold text-xs">
+                    <button @click="viewStudentAnalytics(s)" title="点击查看历次成绩趋势"
+                            :class="s.score >= 120 ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : s.score >= 90 ? 'bg-sky-100 text-sky-700 hover:bg-sky-200' : 'bg-rose-100 text-rose-700 hover:bg-rose-200'"
+                            class="px-2.5 py-1 rounded-md font-bold text-xs transition flex items-center gap-1.5">
+                      <i class="fa fa-line-chart text-[10px]"></i>
                       {{ s.score }} 分
-                    </span>
+                    </button>
                   </td>
                   <td class="p-3 text-xs text-rose-500 font-medium">{{ s.weakness || '无' }}</td>
                   <td class="p-3 text-xs text-slate-500 max-w-xs truncate">{{ s.notes || '暂无' }}</td>
                   <td class="p-3 text-right space-x-2">
-                    <button @click="editScoreOnly(s)" class="text-xs bg-matcha-100 text-matcha-800 px-2 py-1 rounded hover:bg-matcha-200">修改成绩</button>
-                    <button @click="editStudent(s)" class="text-xs text-matcha-600 hover:underline">编辑</button>
+                    <button @click="openEditStudentModal(s)" class="text-xs text-matcha-700 hover:text-matcha-900 bg-matcha-50 px-2.5 py-1 rounded-lg border border-matcha-200 hover:bg-matcha-100 transition">编辑</button>
                     <button @click="deleteStudent(s)" class="text-xs text-rose-500 hover:underline">删除</button>
                   </td>
                 </tr>
@@ -310,7 +308,6 @@
               <h3 class="font-bold text-lg text-slate-800">课程表</h3>
             </div>
             
-            <!-- 班级颜色自定义选择器 -->
             <div class="flex items-center gap-4 bg-matcha-50/60 p-2 rounded-xl border border-matcha-100 text-xs">
               <div v-for="(cls, idx) in classOptions" :key="cls" class="flex items-center gap-1.5">
                 <span class="font-bold text-slate-700">{{ cls }}:</span>
@@ -335,13 +332,11 @@
 
               <div class="space-y-1.5">
                 <div v-for="(slot, slotIdx) in timeSlots" :key="slotIdx" class="grid grid-cols-6 gap-2 text-center text-xs">
-                  <!-- 节次与时间表 -->
                   <div class="bg-slate-50 py-2.5 px-1 rounded-lg border border-slate-100 flex flex-col justify-center items-center">
                     <span class="font-bold text-slate-700">{{ slot.name }}</span>
                     <span class="text-[10px] text-slate-400 font-mono mt-0.5">{{ slot.time }}</span>
                   </div>
 
-                  <!-- 课程格子 -->
                   <div v-for="dIdx in 5" :key="dIdx" 
                        @click="editScheduleCell(slotIdx, dIdx - 1)"
                        class="p-2 rounded-lg border border-slate-100 bg-white hover:border-matcha-500 transition cursor-pointer flex items-center justify-center min-h-[46px] group">
@@ -469,6 +464,42 @@
       </div>
 
     </main>
+  </div>
+
+  <!-- 弹窗：编辑/新增学生综合弹窗 Modal -->
+  <div v-if="showStudentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-6 w-96 shadow-xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base text-slate-800">{{ isEditingStudent ? '编辑学生档案' : '新增学生档案' }}</h3>
+        <button @click="showStudentModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">学号：</label>
+          <input type="text" v-model="studentForm.no" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">姓名：</label>
+          <input type="text" v-model="studentForm.name" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">最新成绩：</label>
+          <input type="number" v-model.number="studentForm.score" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">薄弱板块：</label>
+          <input type="text" v-model="studentForm.weakness" placeholder="例如：导数切线、圆锥曲线" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">辅导日志/备注：</label>
+          <textarea v-model="studentForm.notes" rows="2" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button @click="showStudentModal = false" class="w-1/2 py-2 border rounded-xl text-xs text-slate-500 hover:bg-slate-50">取消</button>
+        <button @click="saveStudentForm" class="w-1/2 btn-matcha text-xs">保存</button>
+      </div>
+    </div>
   </div>
 
   <!-- 弹窗 1：待办事项 Modal -->
@@ -711,49 +742,82 @@
         return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
       };
 
-      const addStudentPrompt = () => {
-        const no = prompt('学号：', `20240${getStudents(currentClass.value).length + 1}`);
-        const name = prompt('姓名：');
-        const score = prompt('成绩：');
-        if (name) {
-          if (!studentsData.value[currentClass.value]) studentsData.value[currentClass.value] = [];
-          studentsData.value[currentClass.value].push({
+      // 学生 编辑/新增 综合 Modal 控制
+      const showStudentModal = ref(false);
+      const isEditingStudent = ref(false);
+      const currentEditingId = ref(null);
+      const studentForm = ref({
+        no: '',
+        name: '',
+        score: 0,
+        weakness: '',
+        notes: ''
+      });
+
+      const openAddStudentModal = () => {
+        isEditingStudent.value = false;
+        studentForm.value = {
+          no: `20240${getStudents(currentClass.value).length + 1}`,
+          name: '',
+          score: 0,
+          weakness: '',
+          notes: ''
+        };
+        showStudentModal.value = true;
+      };
+
+      const openEditStudentModal = (s) => {
+        isEditingStudent.value = true;
+        currentEditingId.value = s.id;
+        studentForm.value = {
+          no: s.no,
+          name: s.name,
+          score: s.score,
+          weakness: s.weakness || '',
+          notes: s.notes || ''
+        };
+        showStudentModal.value = true;
+      };
+
+      const saveStudentForm = () => {
+        if (!studentForm.value.name.trim()) {
+          alert('请填写真实姓名');
+          return;
+        }
+
+        if (!studentsData.value[currentClass.value]) {
+          studentsData.value[currentClass.value] = [];
+        }
+
+        const list = studentsData.value[currentClass.value];
+
+        if (isEditingStudent.value) {
+          const target = list.find(s => s.id === currentEditingId.value);
+          if (target) {
+            target.no = studentForm.value.no;
+            target.name = studentForm.value.name;
+            if (target.score !== studentForm.value.score) {
+              target.score = Number(studentForm.value.score) || 0;
+              if (!target.history) target.history = [];
+              target.history.push(target.score);
+            }
+            target.weakness = studentForm.value.weakness;
+            target.notes = studentForm.value.notes;
+          }
+        } else {
+          list.push({
             id: Date.now(),
-            no: no || `20240${Date.now().toString().slice(-3)}`,
-            name,
-            score: Number(score) || 0,
-            history: [Number(score) || 0],
-            weakness: '未登记',
-            notes: '无'
+            no: studentForm.value.no,
+            name: studentForm.value.name,
+            score: Number(studentForm.value.score) || 0,
+            history: [Number(studentForm.value.score) || 0],
+            weakness: studentForm.value.weakness || '无',
+            notes: studentForm.value.notes || '无'
           });
-          saveData();
         }
-      };
 
-      // 快速独立修改成绩
-      const editScoreOnly = (s) => {
-        const newScore = prompt(`输入 ${s.name} 的新成绩：`, s.score);
-        if (newScore !== null && newScore.trim() !== '') {
-          s.score = Number(newScore);
-          if (!s.history) s.history = [];
-          s.history.push(s.score);
-          saveData();
-        }
-      };
-
-      // 完整编辑（含学号、成绩、薄弱点）
-      const editStudent = (s) => {
-        const newNo = prompt('修改学号：', s.no);
-        const newScore = prompt('修改成绩：', s.score);
-        const newWeak = prompt('修改薄弱板块：', s.weakness);
-        if (newNo !== null) s.no = newNo;
-        if (newScore !== null && newScore.trim() !== '') {
-          s.score = Number(newScore);
-          if (!s.history) s.history = [];
-          s.history.push(s.score);
-        }
-        if (newWeak !== null) s.weakness = newWeak;
         saveData();
+        showStudentModal.value = false;
       };
 
       const deleteStudent = (s) => {
@@ -815,7 +879,7 @@
         { title: '椭圆标准方程与离心率', code: '\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1, \\quad e = \\frac{c}{a} = \\sqrt{1 - \\frac{b^2}{a^2}}' },
         { title: '双曲线标准方程与渐近线', code: '\\frac{x^2}{a^2} - \\frac{y^2}{b^2} = 1, \\quad y = \\pm \\frac{b}{a}x' },
         { title: '抛物线标准方程与焦点', code: 'y^2 = 2px \\quad (p>0), \\quad F\\left(\\frac{p}{2}, 0\\right)' },
-        { title: '常见导数公式', code: '(x^n)\' = n x^{n-1}, \\quad (e^x)\' = e^x, \\quad (\\ln x)\' = \\frac{1}{x}' },
+        { title: '常见导数公式', code: '(x^n)\' = n x^{n-1}, \\quad (e^x)\ me= e^x, \\quad (\\ln x)\' = \\frac{1}{x}' },
         { title: '导数切线方程', code: 'y - f(x_0) = f\'(x_0)(x - x_0)' },
         { title: '排列数与组合数公式', code: 'A_n^m = \\frac{n!}{(n-m)!}, \\quad C_n^m = \\frac{n!}{m!(n-m)!}' },
         { title: '二项式定理', code: '(a+b)^n = \\sum_{k=0}^{n} C_n^k a^{n-k} b^k' },
@@ -914,7 +978,8 @@
       return {
         menuList, activeMenu, searchQuery, classOptions, currentClass,
         studentsData, getStudents, getClassAvg, getDoubleClassAvg, getWarningCount, filteredStudents,
-        isDesensitized, desensitizeName, importExcel, addStudentPrompt, editScoreOnly, editStudent, deleteStudent,
+        isDesensitized, desensitizeName, importExcel, deleteStudent,
+        showStudentModal, isEditingStudent, studentForm, openAddStudentModal, openEditStudentModal, saveStudentForm,
         prepLinks, addPrepLink, formulaList, copyFormula, aiPrompt, aiResponse, generateAIQuestion,
         parentMessage, parentReplies, generateParentReplies, backupData, clearAllData,
         todos, showTodoModal, newTodoText, addTodo, removeTodo,
