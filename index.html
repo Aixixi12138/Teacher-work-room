@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>数学教学工作台 - 抹茶绿清新版</title>
+  <title>数学教学工作台 - 抹茶绿可交互增强版</title>
   <!-- Tailwind CSS & Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
@@ -20,13 +20,12 @@
               50: '#f4f8f4',
               100: '#e3eee4',
               200: '#c5dcc7',
-              500: '#6b9e78', // 核心抹茶绿主色
+              500: '#6b9e78',
               600: '#548260',
               700: '#43684d',
               800: '#38533f',
             },
             bgSoft: '#f7f9f6',
-            cardBg: '#ffffff',
           }
         }
       }
@@ -44,7 +43,6 @@
         @apply bg-matcha-500 hover:bg-matcha-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center gap-2;
       }
     }
-    /* 自定义滚动条 */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #c5dcc7; border-radius: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -56,7 +54,6 @@
   <!-- ================= 1. 左侧固定侧边导航栏 ================= -->
   <aside class="w-64 bg-white border-r border-matcha-100 flex flex-col justify-between flex-shrink-0 z-20 shadow-sm">
     <div>
-      <!-- 品牌 Logo & 标题 -->
       <div class="p-5 border-b border-matcha-100/60 flex items-center gap-3">
         <div class="w-10 h-10 rounded-2xl bg-matcha-500 flex items-center justify-center text-white text-xl font-bold shadow-sm">
           <i class="fa fa-calculator"></i>
@@ -67,7 +64,6 @@
         </div>
       </div>
 
-      <!-- 导航菜单 -->
       <nav class="py-3 overflow-y-auto max-h-[calc(100vh-140px)] space-y-0.5 px-2">
         <div v-for="menu in menuList" :key="menu.key"
              @click="activeMenu = menu.key"
@@ -86,7 +82,7 @@
       </div>
       <div class="overflow-hidden">
         <p class="text-sm font-bold text-matcha-800 truncate">陈老师</p>
-        <p class="text-xs text-slate-400 truncate">数学任课教师 (高二1/2班)</p>
+        <p class="text-xs text-slate-400 truncate">数学任课教师 ({{ classOptions.join('/') }})</p>
       </div>
     </div>
   </aside>
@@ -96,7 +92,6 @@
 
     <!-- 顶部全局搜索与班级快速切换区 -->
     <header class="bg-white border-b border-matcha-100 px-6 py-3.5 flex justify-between items-center z-10">
-      <!-- 搜索框 -->
       <div class="relative w-80">
         <i class="fa fa-search absolute left-3.5 top-3 text-matcha-500"></i>
         <input type="text" v-model="searchQuery" 
@@ -104,8 +99,8 @@
                class="w-full bg-matcha-50/50 border border-matcha-100 rounded-xl pl-10 pr-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-matcha-500/50 transition"/>
       </div>
 
-      <!-- 班级快速选择器 -->
-      <div class="flex items-center gap-2">
+      <!-- 班级选择与自定义管理 -->
+      <div class="flex items-center gap-3">
         <span class="text-xs text-slate-400 font-medium">当前聚焦班级：</span>
         <div class="bg-matcha-50 p-1 rounded-xl border border-matcha-100 flex gap-1">
           <button v-for="c in classOptions" :key="c" @click="currentClass = c"
@@ -114,6 +109,9 @@
             {{ c }}
           </button>
         </div>
+        <button @click="manageClassNames" class="text-xs text-matcha-600 hover:text-matcha-800 flex items-center gap-1 bg-matcha-100/50 px-2.5 py-1.5 rounded-lg border border-matcha-200">
+          <i class="fa fa-pencil"></i> 改班级名
+        </button>
       </div>
     </header>
 
@@ -122,17 +120,20 @@
 
       <!-- 1. 工作台 (Dashboard) -->
       <div v-if="activeMenu === 'dashboard'" class="space-y-6">
-        <!-- 核心指标顶部通栏 -->
+        
+        <!-- 核心指标顶部卡片 (支持点击互动与修改) -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="card-style flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl">
+          <!-- 待办任务卡片 (可点击弹窗管理) -->
+          <div @click="showTodoModal = true" class="card-style flex items-center gap-4 cursor-pointer hover:border-matcha-500 group">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
               <i class="fa fa-tasks"></i>
             </div>
             <div>
-              <p class="text-xs text-slate-400">待办教学任务</p>
-              <h3 class="text-2xl font-bold text-slate-800 mt-0.5">3 项</h3>
+              <p class="text-xs text-slate-400 flex items-center gap-1">待办教学任务 <i class="fa fa-pencil text-[10px] text-amber-500"></i></p>
+              <h3 class="text-2xl font-bold text-slate-800 mt-0.5">{{ todos.filter(t => !t.done).length }} 项待办</h3>
             </div>
           </div>
+
           <div class="card-style flex items-center gap-4">
             <div class="w-12 h-12 rounded-2xl bg-matcha-100 text-matcha-700 flex items-center justify-center text-xl">
               <i class="fa fa-file-text-o"></i>
@@ -142,22 +143,45 @@
               <h3 class="text-2xl font-bold text-slate-800 mt-0.5">94%</h3>
             </div>
           </div>
-          <div class="card-style flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl">
+
+          <!-- 月考倒计时卡片 (可点击修改天数/日期) -->
+          <div @click="editExamCountdown" class="card-style flex items-center gap-4 cursor-pointer hover:border-rose-300 group">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
               <i class="fa fa-clock-o"></i>
             </div>
             <div>
-              <p class="text-xs text-slate-400">月考倒计时</p>
-              <h3 class="text-2xl font-bold text-rose-600 mt-0.5">12 天</h3>
+              <p class="text-xs text-slate-400 flex items-center gap-1">{{ examTitle }} <i class="fa fa-pencil text-[10px] text-rose-400"></i></p>
+              <h3 class="text-2xl font-bold text-rose-600 mt-0.5">{{ examDays }} 天</h3>
             </div>
           </div>
+
           <div class="card-style flex items-center gap-4">
             <div class="w-12 h-12 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl">
               <i class="fa fa-line-chart"></i>
             </div>
             <div>
               <p class="text-xs text-slate-400">双班平均分</p>
-              <h3 class="text-2xl font-bold text-slate-800 mt-0.5">107.5 分</h3>
+              <h3 class="text-2xl font-bold text-slate-800 mt-0.5">{{ getDoubleClassAvg() }} 分</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- 待办事项快速预览列表卡片 -->
+        <div class="card-style">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+              <i class="fa fa-list-ul text-matcha-500"></i> 待办事项清单
+            </h3>
+            <button @click="showTodoModal = true" class="text-xs text-matcha-600 hover:underline">+ 管理/添加待办</button>
+          </div>
+          <div class="space-y-2">
+            <div v-for="(todo, idx) in todos" :key="idx" class="flex items-center justify-between p-2.5 bg-matcha-50/50 rounded-xl border border-matcha-100/60 text-xs">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" v-model="todo.done" @change="saveData" class="rounded text-matcha-500 focus:ring-matcha-500">
+                <span :class="{'line-through text-slate-400': todo.done, 'text-slate-700 font-medium': !todo.done}">{{ todo.text }}</span>
+              </label>
+
+              <span class="text-[10px] bg-white text-slate-400 px-2 py-0.5 rounded-md border">{{ todo.date }}</span>
             </div>
           </div>
         </div>
@@ -186,9 +210,8 @@
         <div class="card-style">
           <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-lg text-slate-800">班级概况列表</h3>
-            <span class="text-xs text-slate-400">支持切换班级快速查看整体表现</span>
+            <button @click="manageClassNames" class="btn-matcha text-xs"><i class="fa fa-cog"></i> 修改班级名称</button>
           </div>
-          <!-- 班级概览表格 -->
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
               <thead class="bg-matcha-50/60 text-matcha-800 font-semibold border-b border-matcha-100">
@@ -229,6 +252,9 @@
               <p class="text-xs text-slate-400 mt-0.5">支持 Excel 导入名单与一键数据脱敏显示</p>
             </div>
             <div class="flex items-center gap-2">
+              <button @click="addStudentPrompt" class="px-3 py-1.5 bg-matcha-100 text-matcha-800 rounded-xl text-xs font-medium hover:bg-matcha-200">
+                <i class="fa fa-plus"></i> 手动添加学生
+              </button>
               <button @click="isDesensitized = !isDesensitized" class="px-3 py-1.5 border border-matcha-200 rounded-xl text-xs font-medium hover:bg-matcha-50 text-slate-600">
                 <i class="fa" :class="isDesensitized ? 'fa-eye' : 'fa-eye-slash'"></i> {{ isDesensitized ? '取消脱敏' : '一键脱敏' }}
               </button>
@@ -239,7 +265,6 @@
             </div>
           </div>
 
-          <!-- 学生列表表格 -->
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
               <thead class="bg-matcha-50/60 text-matcha-800 font-semibold border-b border-matcha-100">
@@ -266,8 +291,9 @@
                   </td>
                   <td class="p-3 text-xs text-rose-500 font-medium">{{ s.weakness || '无明显短板' }}</td>
                   <td class="p-3 text-xs text-slate-500 max-w-xs truncate">{{ s.notes || '暂无面批记录' }}</td>
-                  <td class="p-3 text-right">
+                  <td class="p-3 text-right space-x-2">
                     <button @click="editStudent(s)" class="text-xs text-matcha-600 hover:underline">编辑</button>
+                    <button @click="deleteStudent(s)" class="text-xs text-rose-500 hover:underline">删除</button>
                   </td>
                 </tr>
               </tbody>
@@ -276,20 +302,29 @@
         </div>
       </div>
 
-      <!-- 4. 教学课表 (Timetable) -->
+      <!-- 4. 教学课表 (支持点击格子直接编辑内容) -->
       <div v-else-if="activeMenu === 'schedule'" class="space-y-6">
         <div class="card-style">
-          <h3 class="font-bold text-lg text-slate-800 mb-4">高二数学周课表 (1班 & 2班)</h3>
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-bold text-lg text-slate-800">高二数学周课表 (实时点击格子即可修改内容)</h3>
+              <p class="text-xs text-slate-400 mt-0.5">可以直接输入课程、班级或备注，修改后自动保存</p>
+            </div>
+          </div>
           <div class="grid grid-cols-6 gap-3 text-center text-sm">
             <div class="bg-matcha-100/60 font-semibold py-2 rounded-lg text-matcha-800">时间/星期</div>
             <div v-for="day in ['周一','周二','周三','周四','周五']" :key="day" class="bg-matcha-100/60 font-semibold py-2 rounded-lg text-matcha-800">{{ day }}</div>
 
-            <template v-for="slot in ['上午 1-2 节', '上午 3-4 节', '下午 5-6 节', '晚自习']">
+            <template v-for="(slot, slotIdx) in ['上午 1-2 节', '上午 3-4 节', '下午 5-6 节', '晚自习']" :key="slotIdx">
               <div class="bg-slate-50 py-4 font-medium text-xs text-slate-400 flex items-center justify-center rounded-lg">{{ slot }}</div>
-              <div v-for="d in 5" :key="d" class="p-3 rounded-xl border border-slate-100 bg-white hover:border-matcha-300 transition text-xs flex flex-col justify-center gap-1">
-                <span v-if="(d+slot.length)%3===0" class="bg-matcha-500 text-white font-bold py-1 px-2 rounded-md">高二(1)班 数学</span>
-                <span v-else-if="(d+slot.length)%2===0" class="bg-sky-500 text-white font-bold py-1 px-2 rounded-md">高二(2)班 数学</span>
-                <span v-else class="text-slate-300">备课/空堂</span>
+              <div v-for="dIdx in 5" :key="dIdx" 
+                   @click="editScheduleCell(slotIdx, dIdx - 1)"
+                   class="p-3 rounded-xl border border-slate-100 bg-white hover:border-matcha-500 transition cursor-pointer text-xs flex flex-col justify-center gap-1 group relative">
+                <span v-if="timetable[slotIdx] && timetable[slotIdx][dIdx - 1]" 
+                      class="bg-matcha-500 text-white font-bold py-1 px-2 rounded-md shadow-sm">
+                  {{ timetable[slotIdx][dIdx - 1] }}
+                </span>
+                <span v-else class="text-slate-300 group-hover:text-matcha-500">+ 点击安排</span>
               </div>
             </template>
           </div>
@@ -312,10 +347,9 @@
         </div>
       </div>
 
-      <!-- 6. 作业与练习 (Homework) -->
+      <!-- 6. 作业与练习 -->
       <div v-else-if="activeMenu === 'homework'" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- OCR试题识别模拟 -->
           <div class="card-style">
             <h3 class="font-bold text-base text-slate-800 mb-3"><i class="fa fa-camera text-matcha-500 mr-2"></i>试题图片 OCR 识别台账</h3>
             <div class="border-2 border-dashed border-matcha-200 rounded-xl p-6 text-center hover:bg-matcha-50 transition cursor-pointer" @click="simulateOCR">
@@ -328,11 +362,10 @@
             </div>
           </div>
 
-          <!-- 批量生成数学评语 -->
           <div class="card-style">
             <h3 class="font-bold text-base text-slate-800 mb-3"><i class="fa fa-commenting-o text-matcha-500 mr-2"></i>作业评语生成与 Word 导出</h3>
             <div class="space-y-3">
-              <textarea v-model="commentTemplate" rows="3" class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50" placeholder="评语模板：{name}同学，本次作业在{topic}部分表现优异..."></textarea>
+              <textarea v-model="commentTemplate" rows="3" class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50" placeholder="评语模板：{name}同学，本次作业表现优异..."></textarea>
               <button @click="generateComments" class="btn-matcha w-full text-xs">生成并导出 Word 评语</button>
             </div>
           </div>
@@ -347,7 +380,7 @@
         </div>
       </div>
 
-      <!-- 8. 资源库 (Resources) -->
+      <!-- 8. 资源库 -->
       <div v-else-if="activeMenu === 'resources'" class="space-y-6">
         <div class="card-style">
           <h3 class="font-bold text-lg text-slate-800 mb-4">试卷、课件与习题素材库</h3>
@@ -366,7 +399,7 @@
         </div>
       </div>
 
-      <!-- 9. 公式工具中心 (Math Formulas) -->
+      <!-- 9. 公式工具中心 -->
       <div v-else-if="activeMenu === 'formulas'" class="space-y-6">
         <div class="card-style">
           <h3 class="font-bold text-lg text-slate-800 mb-4">高二常用数学 LaTeX 公式模板（点击复制）</h3>
@@ -384,7 +417,7 @@
         </div>
       </div>
 
-      <!-- 10. AI 教学助手 (AI Assistant) -->
+      <!-- 10. AI 教学助手 -->
       <div v-else-if="activeMenu === 'ai'" class="space-y-6">
         <div class="card-style">
           <h3 class="font-bold text-lg text-slate-800 mb-2"><i class="fa fa-magic text-matcha-500 mr-2"></i>AI 智能出题与解析生成器</h3>
@@ -398,7 +431,7 @@
         </div>
       </div>
 
-      <!-- 11. 家校沟通 (Parent Communication) -->
+      <!-- 11. 家校沟通 -->
       <div v-else-if="activeMenu === 'communication'" class="space-y-6">
         <div class="card-style">
           <h3 class="font-bold text-lg text-slate-800 mb-2"><i class="fa fa-comments text-matcha-500 mr-2"></i>家长消息高情商回复生成器</h3>
@@ -414,7 +447,7 @@
         </div>
       </div>
 
-      <!-- 12. 设置 (Settings) -->
+      <!-- 12. 设置 -->
       <div v-else-if="activeMenu === 'settings'" class="space-y-6">
         <div class="card-style space-y-4">
           <h3 class="font-bold text-lg text-slate-800 border-b pb-3">系统基础设置与数据管理</h3>
@@ -437,6 +470,28 @@
 
     </main>
   </div>
+
+  <!-- 待办事项管理弹窗 Modal -->
+  <div v-if="showTodoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-6 w-96 shadow-xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base text-slate-800">管理待办任务</h3>
+        <button @click="showTodoModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" v-model="newTodoText" placeholder="输入新待办内容..." class="flex-1 border rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-matcha-500">
+        <button @click="addTodo" class="btn-matcha text-xs px-3">添加</button>
+      </div>
+      <div class="max-h-60 overflow-y-auto space-y-2">
+        <div v-for="(t, idx) in todos" :key="idx" class="flex justify-between items-center p-2 bg-slate-50 rounded-xl text-xs">
+          <span :class="{'line-through text-slate-400': t.done}">{{ t.text }}</span>
+          <button @click="removeTodo(idx)" class="text-rose-500 text-xs hover:underline">删除</button>
+        </div>
+      </div>
+      <button @click="showTodoModal = false" class="w-full py-2 bg-matcha-50 text-matcha-800 text-xs font-semibold rounded-xl">关闭</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -444,7 +499,6 @@
 
   createApp({
     setup() {
-      // 导航菜单定义
       const menuList = [
         { key: 'dashboard', label: '工作台', icon: 'fa fa-dashboard' },
         { key: 'classes', label: '我的班级', icon: 'fa fa-users' },
@@ -462,20 +516,81 @@
 
       const activeMenu = ref('dashboard');
       const searchQuery = ref('');
-      const classOptions = ['高二(1)班', '高二(2)班'];
+      const classOptions = ref(['高二(1)班', '高二(2)班']);
       const currentClass = ref('高二(1)班');
       const isDesensitized = ref(false);
 
-      // 默认初始数据
+      // 可修改数据：待办事项
+      const todos = ref([
+        { text: '批改高二(1)班导数课后作业', done: false, date: '今日' },
+        { text: '准备高二(2)班椭圆试卷讲评教案', done: false, date: '明日' },
+        { text: '整理学情诊断报告与个别面批名单', done: true, date: '已完成' },
+      ]);
+      const showTodoModal = ref(false);
+      const newTodoText = ref('');
+
+      const addTodo = () => {
+        if (!newTodoText.value.trim()) return;
+        todos.value.push({ text: newTodoText.value.trim(), done: false, date: '待办' });
+        newTodoText.value = '';
+        saveData();
+      };
+      const removeTodo = (idx) => {
+        todos.value.splice(idx, 1);
+        saveData();
+      };
+
+      // 可修改数据：倒计时
+      const examTitle = ref('月考倒计时');
+      const examDays = ref(12);
+      const editExamCountdown = () => {
+        const newTitle = prompt('修改倒计时名称:', examTitle.value);
+        const newDays = prompt('修改剩余天数:', examDays.value);
+        if (newTitle) examTitle.value = newTitle;
+        if (newDays && !isNaN(newDays)) examDays.value = Number(newDays);
+        saveData();
+      };
+
+      // 可修改数据：自定义班级名称
+      const manageClassNames = () => {
+        const c1 = prompt('请输入第一个班级名称：', classOptions.value[0]);
+        const c2 = prompt('请输入第二个班级名称：', classOptions.value[1]);
+        if (c1 && c2) {
+          const oldData = { ...studentsData.value };
+          studentsData.value = {};
+          studentsData.value[c1] = oldData[classOptions.value[0]] || [];
+          studentsData.value[c2] = oldData[classOptions.value[1]] || [];
+          classOptions.value = [c1, c2];
+          currentClass.value = c1;
+          saveData();
+        }
+      };
+
+      // 可修改数据：教学课表矩阵 (4行5列)
+      const timetable = ref([
+        ['高二(1)班 数学', '备课/空堂', '高二(2)班 数学', '备课/空堂', '高二(1)班 数学'],
+        ['备课/空堂', '高二(1)班 数学', '备课/空堂', '高二(2)班 数学', '备课/空堂'],
+        ['高二(2)班 数学', '备课/空堂', '高二(1)班 数学', '备课/空堂', '高二(2)班 数学'],
+        ['晚自习答疑', '晚自习答疑', '空闲', '晚自习答疑', '空闲']
+      ]);
+
+      const editScheduleCell = (slotIdx, dayIdx) => {
+        const current = timetable.value[slotIdx][dayIdx];
+        const val = prompt('请输入该时段的课程/班级安排（置空即表示无课）：', current);
+        if (val !== null) {
+          timetable.value[slotIdx][dayIdx] = val.trim();
+          saveData();
+        }
+      };
+
+      // 默认学生数据
       const defaultData = {
         '高二(1)班': [
           { id: 1, no: '20240101', name: '张伟', score: 128, weakness: '导数切线与单调性', notes: '解题规范，大题可挑战压轴' },
           { id: 2, no: '20240102', name: '李华', score: 85, weakness: '圆锥曲线联立计算', notes: '计算易失误，需加强代数简化训练' },
-          { id: 3, no: '20240103', name: '王芳', score: 102, weakness: '立体几何向量法', notes: '法向量求法需复习' },
         ],
         '高二(2)班': [
           { id: 4, no: '20240201', name: '赵强', score: 115, weakness: '排列组合分类讨论', notes: '思维敏捷，个别情况易遗漏' },
-          { id: 5, no: '20240202', name: '陈明', score: 74, weakness: '函数与方程', notes: '基础概念模糊，需每周面批' },
         ]
       };
 
@@ -483,19 +598,48 @@
 
       // 数据持久化
       const loadData = () => {
-        const local = localStorage.getItem('math_teacher_data');
-        studentsData.value = local ? JSON.parse(local) : defaultData;
-      };
-      const saveData = () => {
-        localStorage.setItem('math_teacher_data', JSON.stringify(studentsData.value));
+        const local = localStorage.getItem('math_teacher_data_v2');
+        if (local) {
+          const parsed = JSON.parse(local);
+          studentsData.value = parsed.studentsData || defaultData;
+          classOptions.value = parsed.classOptions || ['高二(1)班', '高二(2)班'];
+          currentClass.value = classOptions.value[0];
+          todos.value = parsed.todos || todos.value;
+          examTitle.value = parsed.examTitle || '月考倒计时';
+          examDays.value = parsed.examDays || 12;
+          if (parsed.timetable) timetable.value = parsed.timetable;
+        } else {
+          studentsData.value = defaultData;
+        }
       };
 
-      // 过滤与计算属性
+      const saveData = () => {
+        const payload = {
+          studentsData: studentsData.value,
+          classOptions: classOptions.value,
+          todos: todos.value,
+          examTitle: examTitle.value,
+          examDays: examDays.value,
+          timetable: timetable.value
+        };
+        localStorage.setItem('math_teacher_data_v2', JSON.stringify(payload));
+      };
+
+      // 数据计算辅助函数
       const getStudents = (cls) => studentsData.value[cls] || [];
       const getClassAvg = (cls) => {
         const list = getStudents(cls);
         if (!list.length) return 0;
         return (list.reduce((sum, s) => sum + s.score, 0) / list.length).toFixed(1);
+      };
+      const getDoubleClassAvg = () => {
+        let total = 0, count = 0;
+        classOptions.value.forEach(c => {
+          const list = getStudents(c);
+          total += list.reduce((s, x) => s + x.score, 0);
+          count += list.length;
+        });
+        return count ? (total / count).toFixed(1) : 0;
       };
       const getWarningCount = (cls) => getStudents(cls).filter(s => s.score < 90).length;
 
@@ -505,14 +649,46 @@
         return list.filter(s => s.name.includes(searchQuery.value) || s.no.includes(searchQuery.value));
       });
 
-      // 姓名脱敏处理
       const desensitizeName = (name) => {
         if (!name) return '';
         if (name.length === 2) return name[0] + '*';
         return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
       };
 
-      // Excel 导入逻辑
+      const addStudentPrompt = () => {
+        const name = prompt('输入学生姓名：');
+        const score = prompt('输入数学最近成绩：');
+        if (name) {
+          if (!studentsData.value[currentClass.value]) studentsData.value[currentClass.value] = [];
+          studentsData.value[currentClass.value].push({
+            id: Date.now(),
+            no: `20240${studentsData.value[currentClass.value].length + 1}`,
+            name,
+            score: Number(score) || 0,
+            weakness: '未登记',
+            notes: '无'
+          });
+          saveData();
+        }
+      };
+
+      const editStudent = (s) => {
+        const newScore = prompt('修改成绩：', s.score);
+        const newWeak = prompt('修改薄弱点：', s.weakness);
+        if (newScore !== null) s.score = Number(newScore);
+        if (newWeak !== null) s.weakness = newWeak;
+        saveData();
+      };
+
+      const deleteStudent = (s) => {
+        if (confirm(`确定要删除 ${s.name} 的记录吗？`)) {
+          const list = studentsData.value[currentClass.value];
+          const idx = list.findIndex(item => item.id === s.id);
+          if (idx !== -1) list.splice(idx, 1);
+          saveData();
+        }
+      };
+
       const importExcel = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -537,11 +713,9 @@
         reader.readAsBinaryString(file);
       };
 
-      // 其它功能数据源与方法
       const prepLinks = ref([
         { title: '国家中小学智慧教育平台', url: 'https://basic.smartedu.cn/' },
         { title: 'GeoGebra 动态数学软件', url: 'https://www.geogebra.org/' },
-        { title: '高二数学人教A版电子教材', url: 'https://www.pep.com.cn/' },
       ]);
       const addPrepLink = () => {
         const title = prompt('输入网站名称:');
@@ -554,39 +728,33 @@
         ocrResult.value = "已知椭圆 C: x²/a² + y²/b² = 1 (a>b>0) 的右焦点为 F(1,0)，且过点 P(1, 3/2)。求椭圆 C 的方程。";
       };
 
-      const commentTemplate = ref("{name}同学，近期数学在【{topic}】模块进步明显，建议继续保持解答大题步骤规范！");
-      const generateComments = () => {
-        alert("已根据模板批量为当前班级生成数学评语，并导出为 Word 文档！");
-      };
+      const commentTemplate = ref("{name}同学，近期数学在【{topic}】模块进步明显！");
+      const generateComments = () => { alert("已生成评语文件！"); };
 
       const formulaList = ref([
         { title: '椭圆标准方程', code: '\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1 \\quad (a > b > 0)' },
         { title: '导数切线方程', code: 'y - f(x_0) = f\'(x_0)(x - x_0)' },
-        { title: '排列数公式', code: 'A_n^m = \\frac{n!}{(n-m)!}' },
-        { title: '空间向量夹角', code: '\\cos\\theta = \\frac{\\vec{a} \\cdot \\vec{b}}{|\\vec{a}||\\vec{b}|}' },
       ]);
       const copyFormula = (code) => {
         navigator.clipboard.writeText(code);
-        alert('公式 LaTeX 代码已复制到剪贴板！');
+        alert('公式已复制！');
       };
 
       const aiPrompt = ref('');
       const aiResponse = ref('');
       const generateAIQuestion = () => {
-        aiResponse.value = `【AI 生成试题】\n已知函数 f(x) = x³ - 3x，求 f(x) 在区间 [-2, 2] 上的最大值与最小值。\n\n【详细解析】\n1. 求导得 f'(x) = 3x² - 3 = 3(x+1)(x-1)；\n2. 令 f'(x) = 0，得驻点 x = -1, x = 1；\n3. 计算端点与驻点函数值：\n   f(-2) = -2, f(-1) = 2, f(1) = -2, f(2) = 2；\n4. 故最大值为 2，最小值为 -2。`;
+        aiResponse.value = `【AI 生成试题】\n已知函数 f(x) = x³ - 3x，求 f(x) 在区间 [-2, 2] 上的最大值。\n\n【解析】\nf'(x) = 3x² - 3，驻点 x = ±1，计算极值与端点得最大值为 2。`;
       };
 
       const parentMessage = ref('');
       const parentReplies = ref([]);
       const generateParentReplies = () => {
         parentReplies.value = [
-          { style: '温和肯定型', text: '家长您好！孩子近期学习态度很积极，数学成绩微调属于正常知识点巩固期，我们一起鼓励孩子建立信心！' },
-          { style: '专业分析型', text: '家长您好，分析了近期卷面，孩子主要在圆锥曲线计算上失分较多，我已经为他安排了课后针对性错题面批。' },
-          { style: '家校协同型', text: '家长您好，建议在家监督孩子每天花15分钟复习错题本，学校这边我会重点关注他的课堂回答情况，我们保持沟通！' }
+          { style: '温和肯定型', text: '家长您好！孩子近期学习态度很积极，数学成绩微调属于正常知识点巩固期！' },
+          { style: '专业分析型', text: '家长您好，分析了近期卷面，孩子主要在圆锥曲线计算上失分较多。' }
         ];
       };
 
-      // 图表渲染
       let chartInstance = null;
       const renderChart = () => {
         nextTick(() => {
@@ -594,7 +762,6 @@
           if (!container) return;
           if (chartInstance) chartInstance.dispose();
           chartInstance = echarts.init(container);
-
           const list = getStudents(currentClass.value);
           chartInstance.setOption({
             tooltip: { trigger: 'axis' },
@@ -614,7 +781,7 @@
       });
 
       const backupData = () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(studentsData.value));
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localStorage.getItem('math_teacher_data_v2')));
         const a = document.createElement('a');
         a.href = dataStr;
         a.download = `数学教学工作台备份_${new Date().toLocaleDateString()}.json`;
@@ -623,9 +790,8 @@
 
       const clearAllData = () => {
         if (confirm('确定要清空所有数据并恢复初始状态吗？')) {
-          localStorage.removeItem('math_teacher_data');
-          loadData();
-          alert('数据已重置！');
+          localStorage.removeItem('math_teacher_data_v2');
+          location.reload();
         }
       };
 
@@ -635,11 +801,13 @@
 
       return {
         menuList, activeMenu, searchQuery, classOptions, currentClass,
-        studentsData, getStudents, getClassAvg, getWarningCount, filteredStudents,
-        isDesensitized, desensitizeName, importExcel, prepLinks, addPrepLink,
-        ocrResult, simulateOCR, commentTemplate, generateComments,
+        studentsData, getStudents, getClassAvg, getDoubleClassAvg, getWarningCount, filteredStudents,
+        isDesensitized, desensitizeName, importExcel, addStudentPrompt, editStudent, deleteStudent,
+        prepLinks, addPrepLink, ocrResult, simulateOCR, commentTemplate, generateComments,
         formulaList, copyFormula, aiPrompt, aiResponse, generateAIQuestion,
-        parentMessage, parentReplies, generateParentReplies, backupData, clearAllData
+        parentMessage, parentReplies, generateParentReplies, backupData, clearAllData,
+        todos, showTodoModal, newTodoText, addTodo, removeTodo,
+        examTitle, examDays, editExamCountdown, manageClassNames, timetable, editScheduleCell, saveData
       };
     }
   }).mount('#app');
