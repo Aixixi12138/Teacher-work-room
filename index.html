@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>中学班主任工作台</title>
+  <title>高二数学教师工作台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
@@ -12,13 +12,10 @@
       theme: {
         extend: {
           colors: {
-            primary: '#86c8b8',
-            secondary: '#b4d8ed',
-            bgMilk: '#f8faf5',
+            primary: '#0d9488', // 墨绿/青色 更加稳重
+            secondary: '#38bdf8',
+            bgMilk: '#f8fafc',
             cardBg: '#ffffff',
-          },
-          fontFamily: {
-            sans: ['system-ui','sans-serif']
           }
         }
       }
@@ -27,16 +24,10 @@
   <style type="text/tailwindcss">
     @layer utilities {
       .sidebar-item-active {
-        @apply bg-primary/20 text-teal-700 border-l-4 border-primary;
+        @apply bg-teal-50 text-teal-700 border-l-4 border-teal-600 font-medium;
       }
       .card-shadow {
-        @apply shadow-sm rounded-xl bg-cardBg border border-slate-100;
-      }
-      .panel-overlay {
-        @apply fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4;
-      }
-      .drawer-panel {
-        @apply bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-auto p-5;
+        @apply shadow-sm rounded-xl bg-cardBg border border-slate-200/80;
       }
     }
   </style>
@@ -44,216 +35,426 @@
 <body class="bg-bgMilk text-slate-700 min-h-screen">
 <div id="app" class="flex min-h-screen">
   <!-- 左侧导航栏 -->
-  <aside id="sidebar" class="bg-white border-r border-slate-200 transition-all duration-300 w-64 flex-shrink-0 flex flex-col fixed md:static h-screen z-30">
+  <aside class="bg-white border-r border-slate-200 w-64 flex-shrink-0 flex flex-col fixed md:static h-screen z-30">
     <div class="p-4 border-b flex items-center justify-between">
-      <h2 class="font-bold text-lg text-teal-700 sidebar-title">班主任工作台</h2>
-      <button @click="toggleSidebar" class="text-slate-500 hover:text-teal-600">
-        <i class="fa fa-bars text-xl"></i>
+      <div>
+        <h2 class="font-bold text-lg text-teal-800"><i class="fa fa-calculator mr-2"></i>高二数学工作台</h2>
+        <p class="text-xs text-slate-400 mt-0.5">高二年级教学与档案管理</p>
+      </div>
+    </div>
+    
+    <!-- 班级快速切换器 -->
+    <div class="p-3 bg-slate-50 border-b flex gap-2">
+      <button v-for="c in classList" :key="c" 
+              @click="currentClass = c"
+              :class="[currentClass === c ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100']"
+              class="flex-1 py-1.5 text-xs rounded-lg font-medium transition text-center border border-slate-200">
+        {{ c }}
       </button>
     </div>
+
     <nav class="flex-1 py-3 overflow-y-auto">
       <div v-for="(item,idx) in menuList" :key="idx"
-           @click="changePage(item.page)"
-           class="px-4 py-3 cursor-pointer hover:bg-slate-100 flex items-center gap-3"
-           :class="[currentPage===item.page ? 'sidebar-item-active':'']">
-        <i :class="item.icon"></i>
-        <span class="sidebar-text">{{item.label}}</span>
+           @click="currentPage = item.page"
+           class="px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center gap-3 transition"
+           :class="[currentPage === item.page ? 'sidebar-item-active':'']">
+        <i :class="item.icon" class="w-5 text-center"></i>
+        <span>{{item.label}}</span>
       </div>
     </nav>
+
+    <!-- 底部数据备份与恢复 -->
+    <div class="p-3 border-t bg-slate-50 text-xs flex justify-between">
+      <button @click="exportData" class="text-teal-700 hover:underline"><i class="fa fa-download mr-1"></i>备份档案</button>
+      <button @click="importData" class="text-slate-500 hover:underline"><i class="fa fa-upload mr-1"></i>导入档案</button>
+    </div>
   </aside>
 
-  <!-- 侧边栏遮罩（移动端） -->
-  <div v-if="mobileSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black/30 z-20 md:hidden"></div>
-
   <!-- 主内容区 -->
-  <main class="flex-1 md:ml-0 p-4 md:p-6 transition-all">
-    <!-- 工作台首页 -->
+  <main class="flex-1 p-4 md:p-6 overflow-y-auto">
+
+    <!-- 1. 工作台首页 -->
     <div v-if="currentPage==='dashboard'">
-      <h1 class="text-[clamp(1.3rem,2vw,1.8rem)] font-semibold mb-5">工作台首页</h1>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- 常规工作板块 -->
-        <div class="card-shadow p-5">
-          <h3 class="text-lg font-medium mb-4 text-teal-700 flex items-center gap-2">
-            <i class="fa fa-briefcase"></i>常规工作
-          </h3>
-          <div class="space-y-3">
-            <div @click="openModal('attendance')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
-              <div class="font-medium">早读考勤</div>
-              <div class="text-sm text-slate-500 mt-1">今日出勤、迟到、请假名单</div>
-            </div>
-            <div @click="openModal('discipline')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
-              <div class="font-medium">课堂纪律</div>
-              <div class="text-sm text-slate-500 mt-1">本周纪律、表扬、需关注学生</div>
-            </div>
-            <div @click="openModal('homework')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
-              <div class="font-medium">作业收缴</div>
-              <div class="text-sm text-slate-500 mt-1">各科收缴率、未交名单</div>
-            </div>
-            <div @click="openModal('inspect')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
-              <div class="font-medium">课间巡查</div>
-              <div class="text-sm text-slate-500 mt-1">安全巡查、异常登记</div>
-            </div>
-          </div>
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">教学概览 ({{ currentClass }})</h1>
+          <p class="text-sm text-slate-500">重点关注：高二数学逻辑推导与大题得分率</p>
         </div>
-        <!-- 特色工作板块 -->
-        <div class="card-shadow p-5">
-          <h3 class="text-lg font-medium mb-4 text-sky-700 flex items-center gap-2">
-            <i class="fa fa-star"></i>特色工作
-          </h3>
-          <div class="space-y-3">
-            <div @click="openModal('classMeeting')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
-              <div class="font-medium">主题班会</div>
-              <div class="text-sm text-slate-500 mt-1">班会计划、开展记录</div>
-            </div>
-            <div @click="openModal('homeSchool')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
-              <div class="font-medium">家校沟通</div>
-              <div class="text-sm text-slate-500 mt-1">沟通记录、家访计划</div>
-            </div>
-            <div @click="openModal('studentGrow')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition">
-              <div class="font-medium">学生成长</div>
-              <div class="tex<div class="text-sm text-slate-500 mt-1">个人档案、谈心记录与评价</div>
-            </div>
-          </div>
+        <button @click="triggerRollCall" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg shadow-sm text-sm font-medium flex items-center gap-2">
+          <i class="fa fa-random"></i> 课堂板演点名
+        </button>
+      </div>
+
+      <!-- 核心指标 -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="card-shadow p-4 border-l-4 border-teal-500">
+          <div class="text-xs text-slate-500">班级总人数</div>
+          <div class="text-2xl font-bold text-slate-800 mt-1">{{ currentStudents.length }} 人</div>
+        </div>
+        <div class="card-shadow p-4 border-l-4 border-blue-500">
+          <div class="text-xs text-slate-500">最近平均分</div>
+          <div class="text-2xl font-bold text-slate-800 mt-1">{{ classAverage }} 分</div>
+        </div>
+        <div class="card-shadow p-4 border-l-4 border-amber-500">
+          <div class="text-xs text-slate-500">待面批订正学生</div>
+          <div class="text-2xl font-bold text-amber-600 mt-1">{{ pendingHelpCount }} 人</div>
+        </div>
+        <div class="card-shadow p-4 border-l-4 border-rose-500">
+          <div class="text-xs text-slate-500">重点预警生（<90分）</div>
+          <div class="text-2xl font-bold text-rose-600 mt-1">{{ warningCount }} 人</div>
         </div>
       </div>
 
-      <!-- 快捷可视化图表卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 教学日常关注 -->
         <div class="card-shadow p-5">
-          <h3 class="font-medium text-slate-700 mb-2"><i class="fa fa-pie-chart text-teal-600 mr-2"></i>本周考勤统计</h3>
-          <div id="chart-attendance" class="w-full h-64"></div>
+          <h3 class="text-base font-bold mb-4 text-teal-800 flex items-center gap-2">
+            <i class="fa fa-pencil-square-o"></i>高二数学日常追踪
+          </h3>
+          <div class="space-y-3">
+            <div @click="openQuickNote('作业与错题订正')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition flex justify-between items-center">
+              <div>
+                <div class="font-medium text-slate-800">大题错题订正追踪</div>
+                <div class="text-xs text-slate-500 mt-0.5">解析几何/导数大题步骤规范审查</div>
+              </div>
+              <i class="fa fa-angle-right text-slate-400"></i>
+            </div>
+            <div @click="openQuickNote('课面辅导记录')" class="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition flex justify-between items-center">
+              <div>
+                <div class="font-medium text-slate-800">一对一面批面改日志</div>
+                <div class="text-xs text-slate-500 mt-0.5">记录后进生/临界生辅导点拨过程</div>
+              </div>
+              <i class="fa fa-angle-right text-slate-400"></i>
+            </div>
+          </div>
         </div>
+
+        <!-- 班级成绩分布图 -->
         <div class="card-shadow p-5">
-          <h3 class="font-medium text-slate-700 mb-2"><i class="fa fa-line-chart text-sky-600 mr-2"></i>最近作业提交率</h3>
-          <div id="chart-homework" class="w-full h-64"></div>
+          <h3 class="text-base font-bold mb-2 text-slate-800"><i class="fa fa-bar-chart text-teal-600 mr-2"></i>{{ currentClass }} 成绩分布</h3>
+          <div id="chart-score" class="w-full h-56"></div>
         </div>
       </div>
     </div>
 
-    <!-- 其它页面占位 (例：学生档案) -->
-    <div v-else-if="currentPage==='students'" class="card-shadow p-5">
-      <h1 class="text-xl font-semibold mb-4">学生档案管理</h1>
-      <p class="text-slate-500">此处可放置学生列表、成绩录入、评价导出等表格组件。</p>
+    <!-- 2. 学生档案管理（核心修改：可实时输入编辑） -->
+    <div v-else-if="currentPage==='students'">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">{{ currentClass }} - 学生档案管理</h1>
+          <p class="text-sm text-slate-500">点击任何学生卡片可修改档案，更改将自动保存。</p>
+        </div>
+        <button @click="openStudentModal()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm text-sm font-medium flex items-center gap-2">
+          <i class="fa fa-plus"></i> 新增学生档案
+        </button>
+      </div>
+
+      <!-- 学生卡片网格 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-for="s in currentStudents" :key="s.id" 
+             @click="openStudentModal(s)"
+             class="card-shadow p-4 hover:border-teal-500 cursor-pointer transition relative group">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <span class="font-bold text-lg text-slate-800 mr-2">{{ s.name }}</span>
+              <span class="text-xs px-2 py-0.5 bg-slate-100 rounded text-slate-500">学号: {{ s.no }}</span>
+            </div>
+            <span :class="s.score >= 120 ? 'bg-emerald-100 text-emerald-700' : s.score >= 90 ? 'bg-blue-100 text-blue-700' : 'bg-rose-100 text-rose-700'"
+                  class="text-xs px-2 py-1 rounded-full font-bold">
+              数学: {{ s.score }}分
+            </span>
+          </div>
+
+          <div class="text-xs text-slate-600 mb-2">
+            <span class="font-semibold text-slate-500">薄弱板块:</span> 
+            <span class="text-rose-600">{{ s.weakness || '暂无明显短板' }}</span>
+          </div>
+
+          <div class="text-xs bg-slate-50 p-2 rounded text-slate-600 line-clamp-2 border border-slate-100">
+            <span class="font-semibold text-slate-500">面批/评语:</span> {{ s.notes || '点击添加面批记录...' }}
+          </div>
+
+          <div class="mt-3 flex justify-end text-xs text-teal-600 font-medium group-hover:underline">
+            编辑档案 <i class="fa fa-pencil ml-1"></i>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
-  <!-- 通用弹窗 (Modal / Drawer) -->
-  <div v-if="activeModal" class="panel-overlay" @click.self="closeModal">
-    <div class="drawer-panel">
+  <!-- 学生档案编辑弹窗 Modal -->
+  <div v-if="showStudentModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" @click.self="showStudentModal = false">
+    <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl">
       <div class="flex justify-between items-center border-b pb-3 mb-4">
-        <h3 class="text-lg font-bold text-slate-800">{{ modalTitle }}</h3>
-        <button @click="closeModal" class="text-slate-400 hover:text-slate-600">
-          <i class="fa fa-times text-lg"></i>
+        <h3 class="text-lg font-bold text-slate-800">{{ editingStudent.id ? '修改学生档案' : '新增学生档案' }} ({{ currentClass }})</h3>
+        <button @click="showStudentModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa fa-times text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">学生姓名</label>
+            <input v-model="editingStudent.name" type="text" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="输入姓名">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">学号</label>
+            <input v-model="editingStudent.no" type="text" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="输入学号">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">最近数学成绩 (满分150)</label>
+            <input v-model.number="editingStudent.score" type="number" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">薄弱知识点标签</label>
+            <input v-model="editingStudent.weakness" type="text" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="例如：导数极值、解析几何">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">面批辅导日志与评语</label>
+          <textarea v-model="editingStudent.notes" rows="4" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="输入对该生的数学辅导记录、答题习惯观察等..."></textarea>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-between items-center">
+        <button v-if="editingStudent.id" @click="deleteStudent(editingStudent.id)" class="text-rose-600 text-xs hover:underline">
+          <i class="fa fa-trash"></i> 删除该学生
         </button>
-      </div>
-      <div class="text-slate-600">
-        <p class="mb-3">正在录入/查看: <span class="font-bold text-teal-600">{{ modalTitle }}</span> 的详细数据</p>
-        <textarea class="w-full border rounded-lg p-3 text-sm focus:outline-none focus:border-teal-500" rows="4" placeholder="在此输入相关记录或备注..."></textarea>
-      </div>
-      <div class="mt-4 flex justify-end gap-3">
-        <button @click="closeModal" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50 text-sm">取消</button>
-        <button @click="closeModal" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-teal-600 text-sm">保存记录</button>
+        <div v-else></div>
+
+        <div class="flex gap-3">
+          <button @click="showStudentModal = false" class="px-4 py-2 border rounded-lg text-slate-600 text-sm hover:bg-slate-50">取消</button>
+          <button @click="saveStudent" class="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700">保存档案</button>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- 随机点名弹窗 -->
+  <div v-if="showRollCallModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-8 text-center max-w-sm w-full">
+      <h3 class="text-sm font-bold text-slate-500 mb-4">{{ currentClass }} - 课堂提问/板演</h3>
+      <div class="text-4xl font-extrabold text-teal-700 my-6 h-12 flex items-center justify-center">
+        {{ selectedStudentName }}
+      </div>
+      <div class="flex gap-3 justify-center">
+        <button @click="startRollCall" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium">{{ isRolling ? '停止' : '重新抽签' }}</button>
+        <button @click="showRollCallModal = false" class="px-4 py-2 border rounded-lg text-slate-600 text-sm">关闭</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- 引入 Vue 3 并挂载应用 -->
+<!-- Vue 3 -->
 <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
 <script>
-  const { createApp, ref, onMounted, nextTick } = Vue;
+  const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
   createApp({
     setup() {
       const currentPage = ref('dashboard');
-      const mobileSidebarOpen = ref(false);
-      const activeModal = ref(null);
-      const modalTitle = ref('');
+      const classList = ['高二(1)班', '高二(2)班'];
+      const currentClass = ref('高二(1)班');
 
       const menuList = [
         { label: '工作台首页', page: 'dashboard', icon: 'fa fa-home text-lg' },
-        { label: '学生档案', page: 'students', icon: 'fa fa-id-card text-lg' },
-        { label: '家校日志', page: 'homeSchoolLog', icon: 'fa fa-comments text-lg' },
-        { label: '成绩诊断', page: 'grades', icon: 'fa fa-bar-chart text-lg' }
+        { label: '学生档案管理', page: 'students', icon: 'fa fa-address-book text-lg' },
       ];
 
-      const toggleSidebar = () => {
-        mobileSidebarOpen.value = !mobileSidebarOpen.value;
+      // 默认示例数据
+      const defaultData = {
+        '高二(1)班': [
+          { id: '1', no: '01', name: '张伟', score: 128, weakness: '导数切线与单调性', notes: '做题规范，大题步骤完整，可挑战压轴题。' },
+          { id: '2', no: '02', name: '李华', score: 82, weakness: '圆锥曲线标准方程', notes: '计算容易失误，需加强联立方程组根与系数计算。' },
+          { id: '3', no: '03', name: '王芳', score: 105, weakness: '空间向量求二面角', notes: '建系熟练，但计算法向量坐标时容易符号出错。' }
+        ],
+        '高二(2)班': [
+          { id: '4', no: '01', name: '赵强', score: 115, weakness: '排列组合', notes: '思维敏捷，个别分类讨论有遗漏。' },
+          { id: '5', no: '05', name: '陈明', score: 68, weakness: '立体几何/导数', notes: '基础概念较模糊，需每周面批二次函数与不等式。' }
+        ]
       };
 
-      const changePage = (page) => {
-        currentPage.value = page;
+      // 从 localStorage 加载数据或使用默认数据
+      const studentsData = ref({});
+      const loadStoredData = () => {
+        const stored = localStorage.getItem('teacher_students_data');
+        if (stored) {
+          try { studentsData.value = JSON.parse(stored); } catch (e) { studentsData.value = defaultData; }
+        } else {
+          studentsData.value = defaultData;
+        }
       };
 
-      const openModal = (type) => {
-        const titleMap = {
-          attendance: '早读考勤记录',
-          discipline: '课堂纪律登记',
-          homework: '作业收缴情况',
-          inspect: '课间巡查日志',
-          classMeeting: '主题班会规划',
-          homeSchool: '家校沟通档案',
-          studentGrow: '学生成长记录'
+      // 保存到 localStorage
+      const saveData = () => {
+        localStorage.setItem('teacher_students_data', JSON.stringify(studentsData.value));
+      };
+
+      const currentStudents = computed(() => studentsData.value[currentClass.value] || []);
+
+      // 统计计算
+      const classAverage = computed(() => {
+        const list = currentStudents.value;
+        if (!list.length) return 0;
+        const total = list.reduce((acc, curr) => acc + (curr.score || 0), 0);
+        return Math.round(total / list.length);
+      });
+
+      const warningCount = computed(() => currentStudents.value.filter(s => s.score < 90).length);
+      const pendingHelpCount = computed(() => currentStudents.value.filter(s => s.score < 100 || (s.weakness && s.weakness.length > 0)).length);
+
+      // 学生档案编辑 Modal
+      const showStudentModal = ref(false);
+      const editingStudent = ref({});
+
+      const openStudentModal = (student = null) => {
+        if (student) {
+          editingStudent.value = JSON.parse(JSON.stringify(student));
+        } else {
+          editingStudent.value = {
+            id: '',
+            no: String(currentStudents.value.length + 1).padStart(2, '0'),
+            name: '',
+            score: 100,
+            weakness: '',
+            notes: ''
+          };
+        }
+        showStudentModal.value = true;
+      };
+
+      const saveStudent = () => {
+        if (!editingStudent.value.name) return alert('请输入学生姓名');
+        const list = studentsData.value[currentClass.value] || [];
+
+        if (editingStudent.value.id) {
+          // 修改
+          const idx = list.findIndex(s => s.id === editingStudent.value.id);
+          if (idx !== -1) list[idx] = { ...editingStudent.value };
+        } else {
+          // 新增
+          editingStudent.value.id = Date.now().toString();
+          list.push({ ...editingStudent.value });
+        }
+
+        saveData();
+        showStudentModal.value = false;
+        renderCharts();
+      };
+
+      const deleteStudent = (id) => {
+        if (confirm('确定要删除该学生档案吗？')) {
+          studentsData.value[currentClass.value] = studentsData.value[currentClass.value].filter(s => s.id !== id);
+          saveData();
+          showStudentModal.value = false;
+          renderCharts();
+        }
+      };
+
+      // 随机点名逻辑
+      const showRollCallModal = ref(false);
+      const selectedStudentName = ref('准备抽签');
+      const isRolling = ref(false);
+      let rollTimer = null;
+
+      const triggerRollCall = () => {
+        if (!currentStudents.value.length) return alert('当前班级暂无学生数据');
+        showRollCallModal.value = true;
+        startRollCall();
+      };
+
+      const startRollCall = () => {
+        if (isRolling.value) {
+          clearInterval(rollTimer);
+          isRolling.value = false;
+        } else {
+          isRolling.value = true;
+          rollTimer = setInterval(() => {
+            const list = currentStudents.value;
+            const randIndex = Math.floor(Math.random() * list.length);
+            selectedStudentName.value = list[randIndex].name;
+          }, 50);
+        }
+      };
+
+      // 导出/导入数据（防丢失）
+      const exportData = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(studentsData.value));
+        const dlAnchor = document.createElement('a');
+        dlAnchor.setAttribute("href", dataStr);
+        dlAnchor.setAttribute("download", `高二数学学生档案_备份.json`);
+        dlAnchor.click();
+      };
+
+      const importData = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = e => {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = event => {
+            try {
+              studentsData.value = JSON.parse(event.target.result);
+              saveData();
+              alert('数据恢复成功！');
+              renderCharts();
+            } catch (err) { alert('文件格式有误！'); }
+          };
+          reader.readAsText(file);
         };
-        modalTitle.value = titleMap[type] || '业务操作';
-        activeModal.value = type;
+        input.click();
       };
 
-      const closeModal = () => {
-        activeModal.value = null;
-      };
+      // 图表渲染
+      let scoreChartInstance = null;
+      const renderCharts = () => {
+        nextTick(() => {
+          const el = document.getElementById('chart-score');
+          if (!el) return;
+          if (scoreChartInstance) scoreChartInstance.dispose();
+          scoreChartInstance = echarts.init(el);
 
-      const initCharts = () => {
-        const attChartEl = document.getElementById('chart-attendance');
-        if (attChartEl) {
-          const attChart = echarts.init(attChartEl);
-          attChart.setOption({
-            tooltip: { trigger: 'item' },
-            series: [{
-              type: 'pie',
-              radius: ['40%', '70%'],
-              data: [
-                { value: 45, name: '正常出勤', itemStyle: { color: '#86c8b8' } },
-                { value: 2, name: '迟到', itemStyle: { color: '#f59e0b' } },
-                { value: 1, name: '病事假', itemStyle: { color: '#ef4444' } }
-              ]
-            }]
+          const scores = currentStudents.value.map(s => s.score);
+          const ranges = { '优秀(120+)': 0, '良好(100-119)': 0, '及格(90-99)': 0, '待提高(<90)': 0 };
+          scores.forEach(sc => {
+            if (sc >= 120) ranges['优秀(120+)']++;
+            else if (sc >= 100) ranges['良好(100-119)']++;
+            else if (sc >= 90) ranges['及格(90-99)']++;
+            else ranges['待提高(<90)']++;
           });
-        }
 
-        const hwChartEl = document.getElementById('chart-homework');
-        if (hwChartEl) {
-          const hwChart = echarts.init(hwChartEl);
-          hwChart.setOption({
+          scoreChartInstance.setOption({
             tooltip: { trigger: 'axis' },
-            xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五'] },
-            yAxis: { type: 'value', max: 100 },
+            xAxis: { type: 'category', data: Object.keys(ranges) },
+            yAxis: { type: 'value', minInterval: 1 },
             series: [{
-              data: [98, 95, 100, 92, 96],
-              type: 'line',
-              smooth: true,
-              itemStyle: { color: '#3b82f6' }
+              data: Object.values(ranges),
+              type: 'bar',
+              itemStyle: { color: '#0d9488' }
             }]
           });
-        }
+        });
       };
+
+      watch([currentClass, currentPage], () => {
+        if (currentPage.value === 'dashboard') renderCharts();
+      });
 
       onMounted(() => {
-        nextTick(() => {
-          initCharts();
-        });
+        loadStoredData();
+        renderCharts();
       });
 
       return {
-        currentPage,
-        mobileSidebarOpen,
-        activeModal,
-        modalTitle,
-        menuList,
-        toggleSidebar,
-        changePage,
-        openModal,
-        closeModal
+        currentPage, classList, currentClass, menuList, currentStudents,
+        classAverage, warningCount, pendingHelpCount,
+        showStudentModal, editingStudent, openStudentModal, saveStudent, deleteStudent,
+        showRollCallModal, selectedStudentName, isRolling, triggerRollCall, startRollCall,
+        exportData, importData
       };
     }
   }).mount('#app');
