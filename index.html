@@ -762,11 +762,21 @@
       };
       const getWarningCount = (cls) => getStudents(cls).filter(s => s.score < 90).length;
 
-      const filteredStudents = computed(() => {
-        const list = getStudents(currentClass.value);
-        if (!searchQuery.value) return list;
-        return list.filter(s => s.name.includes(searchQuery.value) || s.no.includes(searchQuery.value));
-      });
+    // 修复后的 filteredStudents 计算属性
+const filteredStudents = computed(() => {
+  const list = getStudents(currentClass.value) || [];
+  
+  // 1. 根据搜索条件进行过滤
+  let result = list;
+  if (searchQuery.value) {
+    result = list.filter(s => s.name.includes(searchQuery.value) || String(s.no).includes(searchQuery.value));
+  }
+
+  // 2. 按学号（no）进行自然数升序排序 (支持 "1", "2", "29" 或纯数字)
+  return [...result].sort((a, b) => {
+    return String(a.no).localeCompare(String(b.no), undefined, { numeric: true, sensitivity: 'base' });
+  });
+});
 
       const desensitizeName = (name) => {
         if (!name) return '';
