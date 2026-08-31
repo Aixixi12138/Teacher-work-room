@@ -1,21 +1,337 @@
-<template>
-  <div class="p-4 md:p-6 space-y-4 md:space-y-6">
-    
-    <!-- 导航菜单/切换栏 (示例) -->
-    <div class="flex gap-2 mb-4 border-b pb-2">
-      <button 
-        @click="activeMenu = 'schedule'" 
-        :class="activeMenu === 'schedule' ? 'bg-matcha-500 text-white font-bold' : 'bg-slate-100 text-slate-600'" 
-        class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
-        课程表
-      </button>
-      <button 
-        @click="activeMenu = 'students'" 
-        :class="activeMenu === 'students' ? 'bg-matcha-500 text-white font-bold' : 'bg-slate-100 text-slate-600'" 
-        class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
-        学生档案管理
-      </button>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>数学教学工作台 - 多端适配版</title>
+  <!-- Tailwind CSS & Font Awesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+  <!-- Vue 3 & ECharts & SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            matcha: {
+              50: '#f4f8f4',
+              100: '#e3eee4',
+              200: '#c5dcc7',
+              500: '#6b9e78',
+              600: '#548260',
+              700: '#43684d',
+              800: '#38533f',
+            },
+            bgSoft: '#f7f9f6',
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .sidebar-active {
+        @apply bg-matcha-100 text-matcha-800 font-semibold border-r-4 border-matcha-600;
+      }
+      .card-style {
+        @apply bg-white rounded-2xl p-4 md:p-5 border border-matcha-100/80 shadow-sm hover:shadow-md transition-all duration-200;
+      }
+      .btn-matcha {
+        @apply bg-matcha-500 hover:bg-matcha-600 text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-medium transition shadow-sm flex items-center justify-center gap-1.5;
+      }
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #c5dcc7; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body class="bg-bgSoft text-slate-700 font-sans min-h-screen overflow-x-hidden">
+<div id="app" class="flex h-screen overflow-hidden relative">
+
+  <!-- 移动端遮罩层 -->
+  <div v-if="isMobileMenuOpen" 
+       @click="isMobileMenuOpen = false" 
+       class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden transition-opacity">
+  </div>
+
+  <!-- ================= 1. 响应式侧边导航栏 ================= -->
+  <aside :class="[
+      'fixed md:static top-0 bottom-0 left-0 z-40 w-64 bg-white border-r border-matcha-100 flex flex-col justify-between flex-shrink-0 transition-transform duration-300 shadow-lg md:shadow-none',
+      isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    ]">
+    <div>
+      <div class="p-4 md:p-5 border-b border-matcha-100/60 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-matcha-500 flex items-center justify-center text-white text-xl font-bold shadow-sm">
+            <i class="fa fa-calculator"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-base text-matcha-800 leading-tight">数学教学工作台</h2>
+            <p class="text-xs text-matcha-500 mt-0.5">高中数学</p>
+          </div>
+        </div>
+        <!-- 移动端关闭按钮 -->
+        <button @click="isMobileMenuOpen = false" class="md:hidden text-slate-400 hover:text-slate-600 text-lg p-1">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+
+      <nav class="py-3 overflow-y-auto max-h-[calc(100vh-140px)] space-y-0.5 px-2">
+        <div v-for="menu in menuList" :key="menu.key"
+             @click="switchMenu(menu.key)"
+             class="flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer text-sm text-slate-600 hover:bg-matcha-50 transition"
+             :class="[activeMenu === menu.key ? 'sidebar-active' : '']">
+          <i :class="menu.icon" class="w-5 text-center text-matcha-600"></i>
+          <span>{{ menu.label }}</span>
+        </div>
+      </nav>
     </div>
+
+    <!-- 左下角身份卡片 -->
+    <div class="p-4 border-t border-matcha-100 bg-matcha-50/50 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-matcha-200 flex items-center justify-center text-matcha-800 font-bold text-sm">
+        师
+      </div>
+      <div class="overflow-hidden">
+        <p class="text-sm font-bold text-matcha-800 truncate">陈老师</p>
+        <p class="text-xs text-slate-400 truncate">数学任课教师 ({{ classOptions.join('/') }})</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= 右侧主页面内容区 ================= -->
+  <div class="flex-1 flex flex-col overflow-hidden w-full">
+
+    <!-- 顶部全局搜索与班级切换区 -->
+    <header class="bg-white border-b border-matcha-100 px-4 md:px-6 py-3 flex flex-col md:flex-row gap-3 md:gap-0 justify-between items-stretch md:items-center z-10">
+      
+      <!-- 移动端顶部标题栏与菜单触发按钮 -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <button @click="isMobileMenuOpen = true" class="md:hidden p-2 rounded-xl bg-matcha-50 text-matcha-800 hover:bg-matcha-100 transition">
+            <i class="fa fa-bars text-lg"></i>
+          </button>
+          <span class="md:hidden font-bold text-slate-800 text-sm">数学教学工作台</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 md:hidden">
+          <select v-model="currentClass" class="bg-matcha-50 text-matcha-800 border border-matcha-200 rounded-lg px-2 py-1 text-xs font-bold outline-none">
+            <option v-for="c in classOptions" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 搜索框 -->
+      <div class="relative w-full md:w-80">
+        <i class="fa fa-search absolute left-3.5 top-2.5 md:top-3 text-matcha-500 text-xs md:text-sm"></i>
+        <input type="text" v-model="searchQuery" 
+               placeholder="搜索学生、教案、试卷、错题..." 
+               class="w-full bg-matcha-50/50 border border-matcha-100 rounded-xl pl-9 pr-4 py-1.5 text-xs md:text-sm outline-none focus:ring-2 focus:ring-matcha-500/50 transition"/>
+      </div>
+
+      <!-- 桌面端班级选择 -->
+      <div class="hidden md:flex items-center gap-3">
+        <span class="text-xs text-slate-400 font-medium">当前班级：</span>
+        <div class="bg-matcha-50 p-1 rounded-xl border border-matcha-100 flex gap-1">
+          <button v-for="c in classOptions" :key="c" @click="currentClass = c"
+                  :class="[currentClass === c ? 'bg-matcha-500 text-white shadow-sm' : 'text-slate-600 hover:bg-white']"
+                  class="px-3 py-1 rounded-lg text-xs font-semibold transition">
+            {{ c }}
+          </button>
+        </div>
+        <button @click="manageClassNames" class="text-xs text-matcha-600 hover:text-matcha-800 flex items-center gap-1 bg-matcha-100/50 px-2.5 py-1.5 rounded-lg border border-matcha-200">
+          <i class="fa fa-pencil"></i> 修改班级
+        </button>
+      </div>
+    </header>
+
+    <!-- 动态视图区域 -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
+
+      <!-- 1. 工作台 (Dashboard) -->
+      <div v-if="activeMenu === 'dashboard'" class="space-y-4 md:space-y-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <!-- 待办任务卡片 -->
+          <div @click="showTodoModal = true" class="card-style flex flex-col md:flex-row items-start md:items-center gap-3 cursor-pointer hover:border-matcha-500 group">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg md:text-xl group-hover:scale-110 transition-transform">
+              <i class="fa fa-tasks"></i>
+            </div>
+            <div>
+              <p class="text-[10px] md:text-xs text-slate-400 flex items-center gap-1">待办任务 <i class="fa fa-pencil text-[10px] text-amber-500"></i></p>
+              <h3 class="text-lg md:text-2xl font-bold text-slate-800 mt-0.5">{{ todos.filter(t => !t.done).length }} 项</h3>
+            </div>
+          </div>
+
+          <!-- 教学随记卡片 -->
+          <div @click="showMemoModal = true" class="card-style flex flex-col md:flex-row items-start md:items-center gap-3 cursor-pointer hover:border-matcha-500 group">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg md:text-xl group-hover:scale-110 transition-transform">
+              <i class="fa fa-sticky-note-o"></i>
+            </div>
+            <div class="overflow-hidden w-full">
+              <p class="text-[10px] md:text-xs text-slate-400 flex items-center gap-1">教学随记 <i class="fa fa-pencil text-[10px] text-emerald-500"></i></p>
+              <p class="text-xs font-semibold text-slate-700 mt-0.5 truncate">{{ memoText || '点击添加...' }}</p>
+            </div>
+          </div>
+
+          <!-- 月考倒计时卡片 -->
+          <div @click="showExamModal = true" class="card-style flex flex-col md:flex-row items-start md:items-center gap-3 cursor-pointer hover:border-rose-300 group">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg md:text-xl group-hover:scale-110 transition-transform">
+              <i class="fa fa-clock-o"></i>
+            </div>
+            <div>
+              <p class="text-[10px] md:text-xs text-slate-400 flex items-center gap-1 truncate">{{ examTitle }} <i class="fa fa-pencil text-[10px] text-rose-400"></i></p>
+              <h3 class="text-lg md:text-2xl font-bold text-rose-600 mt-0.5">{{ computedExamDays }} 天</h3>
+            </div>
+          </div>
+
+          <!-- 双班平均分卡片 -->
+          <div class="card-style flex flex-col md:flex-row items-start md:items-center gap-3">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center text-lg md:text-xl">
+              <i class="fa fa-line-chart"></i>
+            </div>
+            <div>
+              <p class="text-[10px] md:text-xs text-slate-400">双班平均分</p>
+              <h3 class="text-lg md:text-2xl font-bold text-slate-800 mt-0.5">{{ getDoubleClassAvg() }} 分</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- 待办事项列表 -->
+        <div class="card-style">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm md:text-base text-slate-800 flex items-center gap-2">
+              <i class="fa fa-list-ul text-matcha-500"></i> 待办事项
+            </h3>
+            <button @click="showTodoModal = true" class="text-xs text-matcha-600 hover:underline">+ 管理</button>
+          </div>
+          <div class="space-y-2">
+            <div v-for="(todo, idx) in todos" :key="idx" class="flex items-center justify-between p-2.5 bg-matcha-50/50 rounded-xl border border-matcha-100/60 text-xs">
+              <label class="flex items-center gap-2 cursor-pointer max-w-[80%]">
+                <input type="checkbox" v-model="todo.done" @change="saveData" class="rounded text-matcha-500 focus:ring-matcha-500">
+                <span :class="{'line-through text-slate-400': todo.done, 'text-slate-700 font-medium': !todo.done}" class="truncate">{{ todo.text }}</span>
+              </label>
+              <span class="text-[10px] bg-white text-slate-400 px-1.5 py-0.5 rounded border shrink-0">{{ todo.date }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 班级简要学情 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div v-for="c in classOptions" :key="c" class="card-style border-t-4 border-t-matcha-500">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-base md:text-lg text-slate-800">{{ c }} 学情概览</h3>
+              <span class="text-xs bg-matcha-100 text-matcha-800 px-2 py-0.5 rounded-full font-medium">{{ getStudents(c).length }}人</span>
+            </div>
+            <div class="space-y-2 text-xs md:text-sm text-slate-600">
+              <div class="flex justify-between"><span>最近月考均分：</span><span class="font-bold text-matcha-700">{{ getClassAvg(c) }} 分</span></div>
+              <div class="flex justify-between"><span>及格率 (≥90分)：</span><span class="font-bold text-sky-600">{{ getPassRate(c) }}</span></div>
+              <div class="flex justify-between"><span>重点预警 (<90分)：</span><span class="font-bold text-rose-500">{{ getWarningCount(c) }} 人</span></div>
+            </div>
+            <button @click="currentClass = c; activeMenu = 'students'" class="mt-4 w-full py-2 bg-matcha-50 hover:bg-matcha-100 text-matcha-800 rounded-xl text-xs font-semibold transition">
+              进入 {{ c }} 管理 →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 我的班级 (My Classes) - 动态计算及格率与优秀率 -->
+      <div v-else-if="activeMenu === 'classes'" class="space-y-6">
+        <div class="card-style">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-base md:text-lg text-slate-800">班级概况列表</h3>
+            <button @click="manageClassNames" class="btn-matcha text-xs"><i class="fa fa-cog"></i> 修改班级</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs md:text-sm min-w-[500px]">
+              <thead class="bg-matcha-50/60 text-matcha-800 font-semibold border-b border-matcha-100">
+                <tr>
+                  <th class="p-3">班级名称</th>
+                  <th class="p-3">学生人数</th>
+                  <th class="p-3">数学平均分</th>
+                  <th class="p-3">优秀率 (≥120)</th>
+                  <th class="p-3">及格率 (≥90)</th>
+                  <th class="p-3">操作</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="c in classOptions" :key="c" class="hover:bg-matcha-50/30 transition">
+                  <td class="p-3 font-bold text-slate-800">{{ c }}</td>
+                  <td class="p-3">{{ getStudents(c).length }} 人</td>
+                  <td class="p-3 font-bold text-matcha-700">{{ getClassAvg(c) }} 分</td>
+                  <td class="p-3 font-semibold text-emerald-600">{{ getExcellentRate(c) }}</td>
+                  <td class="p-3 font-semibold text-sky-600">{{ getPassRate(c) }}</td>
+                  <td class="p-3">
+                    <button @click="currentClass = c; activeMenu = 'students'" class="text-xs bg-matcha-500 text-white px-2.5 py-1 rounded-lg hover:bg-matcha-600 transition">
+                      管理
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 学生管理 (Student Management) -->
+      <div v-else-if="activeMenu === 'students'" class="space-y-4 md:space-y-6">
+        <div class="card-style">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h3 class="font-bold text-base md:text-lg text-slate-800">{{ currentClass }} - 学生档案</h3>
+            <div class="flex flex-wrap items-center gap-1.5 md:gap-2">
+              <button @click="openAddStudentModal" class="px-2.5 py-1.5 bg-matcha-100 text-matcha-800 rounded-xl text-xs font-medium hover:bg-matcha-200">
+                <i class="fa fa-plus"></i> 添加
+              </button>
+              <button @click="isDesensitized = !isDesensitized" class="px-2.5 py-1.5 border border-matcha-200 rounded-xl text-xs font-medium hover:bg-matcha-50 text-slate-600">
+                <i class="fa" :class="isDesensitized ? 'fa-eye' : 'fa-eye-slash'"></i> {{ isDesensitized ? '取消脱敏' : '脱敏' }}
+              </button>
+              <label class="btn-matcha cursor-pointer">
+                <i class="fa fa-upload"></i> 导入
+                <input type="file" accept=".xlsx, .xls" class="hidden" @change="importExcel" />
+              </label>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto -mx-2 md:mx-0">
+            <table class="w-full text-left text-xs md:text-sm min-w-[600px]">
+              <thead class="bg-matcha-50/60 text-matcha-800 font-semibold border-b border-matcha-100">
+                <tr>
+                  <th class="p-2.5 md:p-3">学号</th>
+                  <th class="p-2.5 md:p-3">姓名</th>
+                  <th class="p-2.5 md:p-3">最近成绩</th>
+                  <th class="p-2.5 md:p-3">薄弱板块</th>
+                  <th class="p-2.5 md:p-3">辅导日志</th>
+                  <th class="p-2.5 md:p-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="s in filteredStudents" :key="s.id" class="hover:bg-matcha-50/20">
+                  <td class="p-2.5 md:p-3 font-mono text-xs text-slate-500 font-bold">{{ s.no }}</td>
+                  <td class="p-2.5 md:p-3 font-semibold text-slate-700">
+                    {{ isDesensitized ? desensitizeName(s.name) : s.name }}
+                  </td>
+                  <td class="p-2.5 md:p-3">
+                    <button @click="viewStudentAnalytics(s)" title="点击查看历次成绩趋势"
+                            :class="s.score >= 120 ? 'bg-emerald-100 text-emerald-700' : s.score >= 90 ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-700'"
+                            class="px-2 py-0.5 md:px-2.5 md:py-1 rounded-md font-bold text-xs transition flex items-center gap-1">
+                      <i class="fa fa-line-chart text-[10px]"></i>
+                      {{ s.score }}分
+                    </button>
+                  </td>
+                  <td class="p-2.5 md:p-3 text-xs text-rose-500 font-medium max-w-[100px] truncate">{{ s.weakness || '无' }}</td>
+                  <td class="p-2.5 md:p-3 text-xs text-slate-500 max-w-[120px] truncate">{{ s.notes || '暂无' }}</td>
+                  <td class="p-2.5 md:p-3 text-right space-x-1.5 whitespace-nowrap">
+                    <button @click="openEditStudentModal(s)" class="text-xs text-matcha-700 bg-matcha-50 px-2 py-0.5 rounded border border-matcha-200">编辑</button>
+                    <button @click="deleteStudent(s)" class="text-xs text-rose-500 hover:underline">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
     <!-- 1. 教学课表 -->
     <div v-if="activeMenu === 'schedule'" class="space-y-4 md:space-y-6">
@@ -368,3 +684,644 @@ const saveData = () => {
   @apply px-2.5 py-1.5 bg-matcha-500 text-white rounded-xl text-xs font-medium hover:bg-matcha-600 transition flex items-center gap-1;
 }
 </style>
+
+      <!-- 5. 备课中心 -->
+      <div v-else-if="activeMenu === 'prep'" class="space-y-4 md:space-y-6">
+        <div class="card-style">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-base md:text-lg text-slate-800">备课资源</h3>
+            <button @click="addPrepLink" class="btn-matcha text-xs"><i class="fa fa-plus"></i> 添加</button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <a v-for="link in prepLinks" :key="link.title" :href="link.url" target="_blank" class="p-3 md:p-4 border border-matcha-100 rounded-xl hover:bg-matcha-50 transition block">
+              <div class="font-bold text-xs md:text-sm text-matcha-800 mb-1 truncate"><i class="fa fa-bookmark text-matcha-500 mr-2"></i>{{ link.title }}</div>
+              <p class="text-[10px] text-slate-400 truncate">{{ link.url }}</p>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. 学情分析 (Analytics) -->
+      <div v-else-if="activeMenu === 'analytics'" class="space-y-4 md:space-y-6">
+        <div class="card-style">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+            <h3 class="font-bold text-base md:text-lg text-slate-800">{{ currentClass }} - 成绩趋势分析</h3>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+              <span class="text-xs text-slate-500 font-medium shrink-0">选择学生：</span>
+              <select v-model="selectedStudentForChart" class="w-full md:w-auto border rounded-xl px-3 py-1.5 text-xs bg-matcha-50 outline-none">
+                <option value="">-- 全班成绩分布 --</option>
+                <option v-for="s in getStudents(currentClass)" :key="s.id" :value="s.name">{{ s.name }} (个人趋势)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="analyticsChart" class="w-full h-72 md:h-80"></div>
+        </div>
+      </div>
+
+      <!-- 7. 公式工具中心 -->
+      <div v-else-if="activeMenu === 'formulas'" class="space-y-4 md:space-y-6">
+        <div class="card-style">
+          <h3 class="font-bold text-base md:text-lg text-slate-800 mb-4">LaTeX 公式模板库</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div v-for="f in formulaList" :key="f.title" 
+                 @click="copyFormula(f.code)"
+                 class="p-3 md:p-4 border border-matcha-100 rounded-xl hover:border-matcha-500 cursor-pointer transition bg-matcha-50/30">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-xs text-matcha-800"><i class="fa fa-square text-[10px] text-matcha-500 mr-1"></i>{{ f.title }}</span>
+                <span class="text-[9px] bg-matcha-200 text-matcha-800 px-1.5 py-0.5 rounded">点击复制</span>
+              </div>
+              <p class="font-mono text-xs text-slate-600 bg-white p-2 rounded border border-slate-100 mt-2 overflow-x-auto">{{ f.code }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. AI 教学助手 -->
+      <div v-else-if="activeMenu === 'ai'" class="space-y-4 md:space-y-6">
+        <div class="card-style">
+          <h3 class="font-bold text-base md:text-lg text-slate-800 mb-2"><i class="fa fa-magic text-matcha-500 mr-2"></i>AI 试题生成器</h3>
+          <div class="space-y-3">
+            <input type="text" v-model="aiPrompt" placeholder="输入知识点与题型..." class="w-full border rounded-xl p-2.5 md:p-3 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50"/>
+            <button @click="generateAIQuestion" class="btn-matcha text-xs w-full md:w-auto"><i class="fa fa-flash"></i> 生成试题与解析</button>
+            <div v-if="aiResponse" class="mt-4 p-3 md:p-4 bg-matcha-50 rounded-xl border border-matcha-100 text-xs font-mono whitespace-pre-line text-slate-700">
+              {{ aiResponse }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. 家校沟通 -->
+      <div v-else-if="activeMenu === 'communication'" class="space-y-4 md:space-y-6">
+        <div class="card-style">
+          <h3 class="font-bold text-base md:text-lg text-slate-800 mb-2"><i class="fa fa-comments text-matcha-500 mr-2"></i>家长回复生成器</h3>
+          <textarea v-model="parentMessage" rows="3" class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-matcha-500/50" placeholder="输入家长的消息内容..."></textarea>
+          <button @click="generateParentReplies" class="btn-matcha mt-2 text-xs w-full md:w-auto">生成回复</button>
+
+          <div v-if="parentReplies.length" class="mt-4 space-y-3">
+            <div v-for="(reply, idx) in parentReplies" :key="idx" class="p-3 bg-matcha-50 border border-matcha-100 rounded-xl text-xs space-y-1">
+              <span class="font-bold text-matcha-800">版本 {{ idx + 1 }} ({{ reply.style }})：</span>
+              <p class="text-slate-700">{{ reply.text }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. 设置 -->
+      <div v-else-if="activeMenu === 'settings'" class="space-y-4 md:space-y-6">
+        <div class="card-style space-y-4">
+          <h3 class="font-bold text-base md:text-lg text-slate-800 border-b pb-3">系统设置</h3>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-bold text-xs md:text-sm text-slate-800">本地数据备份</p>
+            </div>
+            <button @click="backupData" class="btn-matcha text-xs">导出备份</button>
+          </div>
+          <div class="flex items-center justify-between border-t pt-4">
+            <div>
+              <p class="font-bold text-xs md:text-sm text-rose-600">清空所有数据</p>
+            </div>
+            <button @click="clearAllData" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-medium transition">重置</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- 弹窗：编辑/新增学生综合 Modal -->
+  <div v-if="showStudentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm md:text-base text-slate-800">{{ isEditingStudent ? '编辑学生档案' : '新增学生档案' }}</h3>
+        <button @click="showStudentModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">学号：</label>
+          <input type="text" v-model="studentForm.no" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">姓名：</label>
+          <input type="text" v-model="studentForm.name" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">最新成绩：</label>
+          <input type="number" v-model.number="studentForm.score" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">薄弱板块：</label>
+          <input type="text" v-model="studentForm.weakness" placeholder="例如：导数切线、圆锥曲线" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1 font-semibold">辅导日志/备注：</label>
+          <textarea v-model="studentForm.notes" rows="2" class="w-full border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-matcha-500"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button @click="showStudentModal = false" class="w-1/2 py-2 border rounded-xl text-xs text-slate-500 hover:bg-slate-50">取消</button>
+        <button @click="saveStudentForm" class="w-1/2 btn-matcha text-xs">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 1：待办事项 Modal -->
+  <div v-if="showTodoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm md:text-base text-slate-800">待办任务</h3>
+        <button @click="showTodoModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" v-model="newTodoText" placeholder="输入新待办..." class="flex-1 border rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-matcha-500">
+        <button @click="addTodo" class="btn-matcha text-xs px-3">添加</button>
+      </div>
+      <div class="max-h-60 overflow-y-auto space-y-2">
+        <div v-for="(t, idx) in todos" :key="idx" class="flex justify-between items-center p-2 bg-slate-50 rounded-xl text-xs">
+          <span :class="{'line-through text-slate-400': t.done}">{{ t.text }}</span>
+          <button @click="removeTodo(idx)" class="text-rose-500 text-xs hover:underline">删除</button>
+        </div>
+      </div>
+      <button @click="showTodoModal = false" class="w-full py-2 bg-matcha-50 text-matcha-800 text-xs font-semibold rounded-xl">关闭</button>
+    </div>
+  </div>
+
+  <!-- 弹窗 2：教学随记 Modal -->
+  <div v-if="showMemoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm md:text-base text-slate-800">教学随记</h3>
+        <button @click="showMemoModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
+      </div>
+      <textarea v-model="memoText" rows="5" class="w-full border rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-matcha-500" placeholder="输入随记..."></textarea>
+      <button @click="saveData(); showMemoModal = false" class="btn-matcha w-full text-xs">保存</button>
+    </div>
+  </div>
+
+  <!-- 弹窗 3：月考日期设置 Modal -->
+  <div v-if="showExamModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm md:text-base text-slate-800">倒计时设置</h3>
+        <button @click="showExamModal = false" class="text-slate-400 text-lg hover:text-slate-600">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-600 mb-1">考试名称：</label>
+          <input type="text" v-model="examTitle" class="w-full border rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+        <div>
+          <label class="block text-slate-600 mb-1">目标日期：</label>
+          <input type="date" v-model="examTargetDate" class="w-full border rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-matcha-500">
+        </div>
+      </div>
+      <button @click="saveData(); showExamModal = false" class="btn-matcha w-full text-xs">保存</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+
+  createApp({
+    setup() {
+      const isMobileMenuOpen = ref(false);
+
+      const menuList = [
+        { key: 'dashboard', label: '工作台', icon: 'fa fa-dashboard' },
+        { key: 'classes', label: '我的班级', icon: 'fa fa-users' },
+        { key: 'students', label: '学生管理', icon: 'fa fa-address-book' },
+        { key: 'schedule', label: '教学课表', icon: 'fa fa-calendar' },
+        { key: 'prep', label: '备课中心', icon: 'fa fa-book' },
+        { key: 'analytics', label: '学情分析', icon: 'fa fa-pie-chart' },
+        { key: 'formulas', label: '公式工具中心', icon: 'fa fa-code' },
+        { key: 'ai', label: 'AI 教学助手', icon: 'fa fa-magic' },
+        { key: 'communication', label: '家校沟通', icon: 'fa fa-comments' },
+        { key: 'settings', label: '设置', icon: 'fa fa-cog' },
+      ];
+
+      const activeMenu = ref('dashboard');
+      const searchQuery = ref('');
+      const classOptions = ref(['高二(1)班', '高二(2)班']);
+      const currentClass = ref('高二(1)班');
+      const isDesensitized = ref(false);
+
+      const classColors = ref(['bg-matcha-500 text-white', 'bg-sky-500 text-white']);
+
+      const switchMenu = (key) => {
+        activeMenu.value = key;
+        isMobileMenuOpen.value = false;
+      };
+
+      const getCellClass = (text) => {
+        if (text.includes(classOptions.value[0])) return classColors.value[0];
+        if (text.includes(classOptions.value[1])) return classColors.value[1];
+        return 'bg-amber-100 text-amber-800';
+      };
+
+      const timeSlots = [
+        { name: '第一节', time: '08:00' },
+        { name: '第二节', time: '08:50' },
+        { name: '第三节', time: '10:05' },
+        { name: '第四节', time: '10:55' },
+        { name: '第五节', time: '11:45' },
+        { name: '第六节', time: '14:20' },
+        { name: '第七节', time: '15:10' },
+        { name: '第八节', time: '16:05' },
+        { name: '班务', time: '17:50' },
+        { name: '晚一', time: '18:40' },
+        { name: '晚二', time: '19:30' },
+        { name: '晚三', time: '20:20' },
+        { name: '延时', time: '21:20' },
+      ];
+
+      const todos = ref([
+        { text: '批改导数课后作业', done: false, date: '今日' },
+        { text: '准备圆锥曲线讲评教案', done: false, date: '明日' },
+      ]);
+      const showTodoModal = ref(false);
+      const newTodoText = ref('');
+      const addTodo = () => {
+        if (!newTodoText.value.trim()) return;
+        todos.value.push({ text: newTodoText.value.trim(), done: false, date: '待办' });
+        newTodoText.value = '';
+        saveData();
+      };
+      const removeTodo = (idx) => {
+        todos.value.splice(idx, 1);
+        saveData();
+      };
+
+      const memoText = ref('提醒：周三第三节课讲椭圆切线弦长公式。');
+      const showMemoModal = ref(false);
+
+      const examTitle = ref('月考倒计时');
+      const examTargetDate = ref('2026-09-18');
+      const showExamModal = ref(false);
+
+      const computedExamDays = computed(() => {
+        if (!examTargetDate.value) return 0;
+        const target = new Date(examTargetDate.value);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const diff = target - today;
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        return days > 0 ? days : 0;
+      });
+
+      const manageClassNames = () => {
+        const c1 = prompt('输入第一个班级名称：', classOptions.value[0]);
+        const c2 = prompt('输入第二个班级名称：', classOptions.value[1]);
+        if (c1 && c2) {
+          const oldData = { ...studentsData.value };
+          studentsData.value = {};
+          studentsData.value[c1] = oldData[classOptions.value[0]] || [];
+          studentsData.value[c2] = oldData[classOptions.value[1]] || [];
+          classOptions.value = [c1, c2];
+          currentClass.value = c1;
+          saveData();
+        }
+      };
+
+      const timetable = ref(Array.from({ length: 13 }, () => Array(5).fill('')));
+
+      const editScheduleCell = (slotIdx, dayIdx) => {
+        const current = timetable.value[slotIdx][dayIdx];
+        const val = prompt('输入课程/班级安排（为空即清空）：', current);
+        if (val !== null) {
+          timetable.value[slotIdx][dayIdx] = val.trim();
+          saveData();
+        }
+      };
+
+      const defaultData = {
+        '高二(1)班': [
+          { id: 1, no: '20240101', name: '张伟', score: 128, history: [110, 115, 122, 128], weakness: '导数切线', notes: '规范' },
+          { id: 2, no: '20240102', name: '李华', score: 85, history: [78, 82, 80, 85], weakness: '圆锥曲线', notes: '计算易失误' },
+        ],
+        '高二(2)班': [
+          { id: 4, no: '20240201', name: '赵强', score: 115, history: [102, 108, 110, 115], weakness: '排列组合', notes: '思维敏捷' },
+        ]
+      };
+
+      const studentsData = ref({});
+
+      const loadData = () => {
+        const local = localStorage.getItem('math_teacher_data_v3');
+        if (local) {
+          const parsed = JSON.parse(local);
+          studentsData.value = parsed.studentsData || defaultData;
+          classOptions.value = parsed.classOptions || ['高二(1)班', '高二(2)班'];
+          currentClass.value = classOptions.value[0];
+          todos.value = parsed.todos || todos.value;
+          memoText.value = parsed.memoText || '';
+          examTitle.value = parsed.examTitle || '月考倒计时';
+          examTargetDate.value = parsed.examTargetDate || '2026-09-18';
+          classColors.value = parsed.classColors || ['bg-matcha-500 text-white', 'bg-sky-500 text-white'];
+          if (parsed.timetable) timetable.value = parsed.timetable;
+        } else {
+          studentsData.value = defaultData;
+          timetable.value[0][0] = '高二(1)班 数学';
+          timetable.value[1][1] = '高二(2)班 数学';
+        }
+      };
+
+      const saveData = () => {
+        const payload = {
+          studentsData: studentsData.value,
+          classOptions: classOptions.value,
+          todos: todos.value,
+          memoText: memoText.value,
+          examTitle: examTitle.value,
+          examTargetDate: examTargetDate.value,
+          classColors: classColors.value,
+          timetable: timetable.value
+        };
+        localStorage.setItem('math_teacher_data_v3', JSON.stringify(payload));
+      };
+
+      const getStudents = (cls) => studentsData.value[cls] || [];
+      const getClassAvg = (cls) => {
+        const list = getStudents(cls);
+        if (!list.length) return 0;
+        return (list.reduce((sum, s) => sum + s.score, 0) / list.length).toFixed(1);
+      };
+
+      // 实时计算及格率 (≥90分)
+      const getPassRate = (cls) => {
+        const list = getStudents(cls);
+        if (!list.length) return '0.0%';
+        const passCount = list.filter(s => s.score >= 90).length;
+        return ((passCount / list.length) * 100).toFixed(1) + '%';
+      };
+
+      // 实时计算优秀率 (≥120分)
+      const getExcellentRate = (cls) => {
+        const list = getStudents(cls);
+        if (!list.length) return '0.0%';
+        const excCount = list.filter(s => s.score >= 120).length;
+        return ((excCount / list.length) * 100).toFixed(1) + '%';
+      };
+
+      const getDoubleClassAvg = () => {
+        let total = 0, count = 0;
+        classOptions.value.forEach(c => {
+          const list = getStudents(c);
+          total += list.reduce((s, x) => s + x.score, 0);
+          count += list.length;
+        });
+        return count ? (total / count).toFixed(1) : 0;
+      };
+      const getWarningCount = (cls) => getStudents(cls).filter(s => s.score < 90).length;
+
+      const filteredStudents = computed(() => {
+        const list = getStudents(currentClass.value);
+        if (!searchQuery.value) return list;
+        return list.filter(s => s.name.includes(searchQuery.value) || s.no.includes(searchQuery.value));
+      });
+
+      const desensitizeName = (name) => {
+        if (!name) return '';
+        if (name.length === 2) return name[0] + '*';
+        return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
+      };
+
+      const showStudentModal = ref(false);
+      const isEditingStudent = ref(false);
+      const currentEditingId = ref(null);
+      const studentForm = ref({ no: '', name: '', score: 0, weakness: '', notes: '' });
+
+      const openAddStudentModal = () => {
+        isEditingStudent.value = false;
+        studentForm.value = {
+          no: `20240${getStudents(currentClass.value).length + 1}`,
+          name: '', score: 0, weakness: '', notes: ''
+        };
+        showStudentModal.value = true;
+      };
+
+      const openEditStudentModal = (s) => {
+        isEditingStudent.value = true;
+        currentEditingId.value = s.id;
+        studentForm.value = {
+          no: s.no, name: s.name, score: s.score, weakness: s.weakness || '', notes: s.notes || ''
+        };
+        showStudentModal.value = true;
+      };
+
+      const saveStudentForm = () => {
+        if (!studentForm.value.name.trim()) {
+          alert('请填写真实姓名');
+          return;
+        }
+
+        if (!studentsData.value[currentClass.value]) {
+          studentsData.value[currentClass.value] = [];
+        }
+
+        const list = studentsData.value[currentClass.value];
+
+        if (isEditingStudent.value) {
+          const target = list.find(s => s.id === currentEditingId.value);
+          if (target) {
+            target.no = studentForm.value.no;
+            target.name = studentForm.value.name;
+            if (target.score !== studentForm.value.score) {
+              target.score = Number(studentForm.value.score) || 0;
+              if (!target.history) target.history = [];
+              target.history.push(target.score);
+            }
+            target.weakness = studentForm.value.weakness;
+            target.notes = studentForm.value.notes;
+          }
+        } else {
+          list.push({
+            id: Date.now(),
+            no: studentForm.value.no,
+            name: studentForm.value.name,
+            score: Number(studentForm.value.score) || 0,
+            history: [Number(studentForm.value.score) || 0],
+            weakness: studentForm.value.weakness || '无',
+            notes: studentForm.value.notes || '无'
+          });
+        }
+
+        saveData();
+        showStudentModal.value = false;
+      };
+
+      const deleteStudent = (s) => {
+        if (confirm(`确定删除 ${s.name} 的记录？`)) {
+          const list = studentsData.value[currentClass.value];
+          const idx = list.findIndex(item => item.id === s.id);
+          if (idx !== -1) list.splice(idx, 1);
+          saveData();
+        }
+      };
+
+      const selectedStudentForChart = ref('');
+      const viewStudentAnalytics = (s) => {
+        selectedStudentForChart.value = s.name;
+        activeMenu.value = 'analytics';
+      };
+
+      const importExcel = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const wb = XLSX.read(evt.target.result, { type: 'binary' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const data = XLSX.utils.sheet_to_json(ws);
+          if (data.length) {
+            studentsData.value[currentClass.value] = data.map((item, index) => ({
+              id: Date.now() + index,
+              no: item['学号'] ? String(item['学号']) : `2024${index + 1}`,
+              name: item['姓名'] || '未知',
+              score: Number(item['成绩']) || 0,
+              history: [Number(item['成绩']) || 0],
+              weakness: item['薄弱点'] || '无',
+              notes: item['备注'] || ''
+            }));
+            saveData();
+            alert('导入成功！');
+          }
+        };
+        reader.readAsBinaryString(file);
+      };
+
+      const prepLinks = ref([
+        { title: '国家中小学智慧教育平台', url: 'https://basic.smartedu.cn/' },
+        { title: 'GeoGebra 动态数学', url: 'https://www.geogebra.org/' },
+      ]);
+      const addPrepLink = () => {
+        const title = prompt('网站名称:');
+        const url = prompt('网站链接:');
+        if (title && url) prepLinks.value.push({ title, url });
+      };
+
+      const formulaList = ref([
+        { title: '一元二次方程求根公式', code: 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}' },
+        { title: '正弦定理与余弦定理', code: '\\frac{a}{\\sin A} = \\frac{b}{\\sin B} = 2R, \\quad c^2 = a^2 + b^2 - 2ab\\cos C' },
+        { title: '等差数列通项与前n项和', code: 'a_n = a_1 + (n-1)d, \\quad S_n = \\frac{n(a_1 + a_n)}{2}' },
+        { title: '等比数列前n项和', code: 'S_n = \\frac{a_1(1-q^n)}{1-q} \\quad (q \\neq 1)' },
+        { title: '基本不等式', code: 'a + b \\ge 2\\sqrt{ab} \\quad (a>0, b>0)' },
+        { title: '椭圆标准方程与离心率', code: '\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1, \\quad e = \\frac{c}{a}' },
+        { title: '双曲线标准方程', code: '\\frac{x^2}{a^2} - \\frac{y^2}{b^2} = 1' },
+        { title: '抛物线标准方程', code: 'y^2 = 2px \\quad (p>0)' },
+        { title: '导数切线方程', code: 'y - f(x_0) = f\'(x_0)(x - x_0)' },
+      ]);
+
+      const copyFormula = (code) => {
+        navigator.clipboard.writeText(code);
+        alert('公式已复制');
+      };
+
+      const aiPrompt = ref('');
+      const aiResponse = ref('');
+      const generateAIQuestion = () => {
+        aiResponse.value = `【AI 生成试题】\n已知函数 f(x) = x³ - 3x，求 f(x) 在区间 [-2, 2] 上的最大值。\n\n【解析】\nf'(x) = 3x² - 3，驻点 x = ±1，计算极大值与端点值，最大值为 2。`;
+      };
+
+      const parentMessage = ref('');
+      const parentReplies = ref([]);
+      const generateParentReplies = () => {
+        parentReplies.value = [
+          { style: '温和肯定型', text: '家长您好！孩子近期学习态度很积极，成绩属于正常波动。' },
+          { style: '专业分析型', text: '家长您好，分析了近期卷面，孩子主要在圆锥曲线计算上失分较多。' }
+        ];
+      };
+
+      let chartInstance = null;
+      const renderChart = () => {
+        nextTick(() => {
+          const container = document.getElementById('analyticsChart');
+          if (!container) return;
+          if (chartInstance) chartInstance.dispose();
+          chartInstance = echarts.init(container);
+
+          const list = getStudents(currentClass.value);
+
+          if (selectedStudentForChart.value) {
+            const student = list.find(s => s.name === selectedStudentForChart.value);
+            const historyData = (student && student.history && student.history.length) ? student.history : [student ? student.score : 0];
+            const xData = historyData.map((_, i) => `第 ${i + 1} 次`);
+
+            chartInstance.setOption({
+              title: { text: `${selectedStudentForChart.value} - 历次成绩趋势`, left: 'center', textStyle: { fontSize: 13 } },
+              tooltip: { trigger: 'axis' },
+              grid: { left: '10%', right: '5%', bottom: '15%', top: '20%' },
+              xAxis: { type: 'category', data: xData },
+              yAxis: { type: 'value', min: 0, max: 150 },
+              series: [{
+                data: historyData,
+                type: 'line',
+                smooth: true,
+                lineStyle: { color: '#548260', width: 3 },
+                itemStyle: { color: '#38533f' },
+                areaStyle: { color: 'rgba(107, 158, 120, 0.2)' }
+              }]
+            });
+          } else {
+            chartInstance.setOption({
+              title: { text: `${currentClass.value} - 全班分布`, left: 'center', textStyle: { fontSize: 13 } },
+              tooltip: { trigger: 'axis' },
+              grid: { left: '10%', right: '5%', bottom: '15%', top: '20%' },
+              xAxis: { type: 'category', data: list.map(s => isDesensitized.value ? desensitizeName(s.name) : s.name) },
+              yAxis: { type: 'value', min: 0, max: 150 },
+              series: [{
+                data: list.map(s => s.score),
+                type: 'bar',
+                itemStyle: { color: '#6b9e78', borderRadius: [6, 6, 0, 0] }
+              }]
+            });
+          }
+        });
+      };
+
+      window.addEventListener('resize', () => {
+        if (chartInstance) chartInstance.resize();
+      });
+
+      watch([activeMenu, currentClass, isDesensitized, selectedStudentForChart], () => {
+        if (activeMenu.value === 'analytics') renderChart();
+      });
+
+      const backupData = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem('math_teacher_data_v3'));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = `数据备份_${new Date().toLocaleDateString()}.json`;
+        a.click();
+      };
+
+      const clearAllData = () => {
+        if (confirm('确定要清空所有数据吗？')) {
+          localStorage.removeItem('math_teacher_data_v3');
+          location.reload();
+        }
+      };
+
+      onMounted(() => {
+        loadData();
+      });
+
+      return {
+        isMobileMenuOpen, switchMenu,
+        menuList, activeMenu, searchQuery, classOptions, currentClass,
+        studentsData, getStudents, getClassAvg, getPassRate, getExcellentRate, getDoubleClassAvg, getWarningCount, filteredStudents,
+        isDesensitized, desensitizeName, importExcel, deleteStudent,
+        showStudentModal, isEditingStudent, studentForm, openAddStudentModal, openEditStudentModal, saveStudentForm,
+        prepLinks, addPrepLink, formulaList, copyFormula, aiPrompt, aiResponse, generateAIQuestion,
+        parentMessage, parentReplies, generateParentReplies, backupData, clearAllData,
+        todos, showTodoModal, newTodoText, addTodo, removeTodo,
+        memoText, showMemoModal, examTitle, examTargetDate, computedExamDays, showExamModal,
+        manageClassNames, timeSlots, timetable, editScheduleCell, classColors, getCellClass, saveData,
+        selectedStudentForChart, viewStudentAnalytics
+      };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
